@@ -1,0 +1,3 @@
+C:/Users/samue/Documents/GitHub/TP_S3/bdd_basecode/_build/CMakeFiles/database_project.dir
+C:/Users/samue/Documents/GitHub/TP_S3/bdd_basecode/_build/CMakeFiles/ALL_BUILD.dir
+C:/Users/samue/Documents/GitHub/TP_S3/bdd_basecode/_build/CMakeFiles/ZERO_CHECK.dir
