@@ -10,6 +10,33 @@
 #if 1
 int main(int argc, char** argv)
 {
+    //Table* table = Table_load("psittamulgiformes.tbl", "../data/intro/");
+    Table* table = Table_createFromCSV("../data/intro/psittamulgiformes.csv", "../data/intro/");
+
+    Entry* cherry = Entry_create(table);
+    strcpy(cherry->values[0], "Cherry");
+    strcpy(cherry->values[1], "Quokka");
+    strcpy(cherry->values[2], "36");
+
+    Table_insertEntry(table, cherry);
+
+    Filter filter = { 0, OP_EQ, "Cherry", "" };
+    SetEntry* entry = SetEntry_create();
+    Table_search(table, &filter, entry);
+
+    Entry* result = Entry_create(table);
+    if (entry->root)
+        Table_readEntry(table, result, entry->root->data);
+    Entry_print(result);
+
+    Table_removeEntry(table, entry->root->data);
+
+    Table_debugPrint(table);
+
+    Entry_destroy(result);
+    SetEntry_destroy(entry);
+    Table_destroy(table);
+
     return EXIT_SUCCESS;
 }
 #endif
