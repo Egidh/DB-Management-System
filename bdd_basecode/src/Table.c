@@ -10,7 +10,7 @@
 int Filter_test(Filter *self, char *nodeKey)
 {
     int cmp1 = strcmp(nodeKey, self->key1);
-    int cmp2 = 0;
+    int cmp2 = strcmp(nodeKey, self->key2);
 
     int res = 0;
     switch (self->requestOp)
@@ -21,7 +21,31 @@ int Filter_test(Filter *self, char *nodeKey)
         if (cmp1 >= 0) res |= FILTER_SEARCH_LEFT;
         break;
 
-        // TODO
+    case OP_LT:
+        if (cmp1 < 0) res |= FILTER_FOUND;
+        if (cmp1 >= 0) res |= FILTER_SEARCH_LEFT;
+        break;
+        
+    case OP_GT:
+        if (cmp1 > 0) res |= FILTER_FOUND;
+        if (cmp1 <= 0) res |= FILTER_SEARCH_RIGHT;
+        break;
+
+    case OP_LEQ:
+        if (cmp1 <= 0) res |= FILTER_FOUND;
+        if (cmp1 > 0) res |= FILTER_SEARCH_LEFT;
+        break;
+
+    case OP_GEQ:
+        if (cmp1 >= 0) res |= FILTER_FOUND;
+        if (cmp1 < 0) res |= FILTER_SEARCH_RIGHT;
+        break;
+
+    case OP_BETW:
+        if (cmp1 > 0 && cmp2 < 0) res |= FILTER_FOUND;
+        if (cmp1 <= 0) res |= FILTER_SEARCH_RIGHT;
+        if (cmp1 >= 0) res |= FILTER_SEARCH_LEFT;
+        break;
 
     default:
         assert(false);
@@ -50,7 +74,7 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
     //Lecture du header du fichier csv et creation du header de la table
     fscanf(csv, "%[^;];%d;\n", table->name, &table->attributeCount);
     table->attributes = (Attribute*)calloc(table->attributeCount, sizeof(Attribute));
-
+    table->entrySize = sizeof(uint64_t);
     for (int i = 0; i < table->attributeCount; i++)
     {
         Attribute* attribute = table->attributes + i;
@@ -193,6 +217,7 @@ Table *Table_load(char *tblFilename, char *folderPath)
     fread(&table->attributeCount, sizeof(int), 1, tbl);
     table->attributes = (Attribute*)calloc(table->attributeCount, sizeof(Attribute));
     void* tmp = calloc(2, sizeof(uint64_t));
+    table->entrySize = sizeof(uint64_t);
     for (int i = 0; i < table->attributeCount; i++)
     {
         Attribute* attribute = table->attributes + i;
@@ -208,6 +233,7 @@ Table *Table_load(char *tblFilename, char *folderPath)
     free(tmp);
     fclose(tbl);
 
+    //ouverture du data file
     strcpy(path, folderPath);
     strncat(path, tblFilename, strlen(tblFilename) - 4);
     strcat(path, ".dat");
@@ -256,7 +282,7 @@ void Table_destroy(Table *self)
 
 void Table_search(Table *self, Filter *filter, SetEntry *resultSet)
 {
-    char result[512];
+    char nodeKey[512];
     uint64_t size = self->attributes[filter->attributeIndex].size;
     int dataLength = 8; //huit premiers octets (pointeur)
     uint64_t start = 8;
@@ -276,84 +302,35 @@ void Table_search(Table *self, Filter *filter, SetEntry *resultSet)
     fseek(dat, start, SEEK_SET);
    
     int check;
-    switch (filter->requestOp)
+
+    while ((check = fread(nodeKey, 1, size, dat)) > 0)
     {
-    case OP_EQ:
-        while ((check = fread(result, 1, size, dat)) > 0)
+        if (Filter_test(filter, nodeKey) & FILTER_FOUND)
         {
-            if (strcmp(result, filter->key1) == 0)
-            {
-                EntryPointer pos = ftell(dat) - start - size;
-                SetEntry_insert(resultSet, pos);
-            }
-            fseek(dat, dataLength, SEEK_CUR);
+            EntryPointer pos = ftell(dat) - start - size;
+            SetEntry_insert(resultSet, pos);
         }
-        break;
-
-    case OP_LT:
-        while ((check = fread(result, 1, size, dat)) > 0)
-        {
-            if (strcmp(result, filter->key1) < 0)
-            {
-                EntryPointer pos = ftell(dat) - start - size;
-                SetEntry_insert(resultSet, pos);
-            }
-            fseek(dat, dataLength, SEEK_CUR);
-        }
-        break;
-
-    case OP_GT:
-        while ((check = fread(result, 1, size, dat)) > 0)
-        {
-            if (strcmp(result, filter->key1) > 0)
-            {
-                EntryPointer pos = ftell(dat) - start - size;
-                SetEntry_insert(resultSet, pos);
-            }
-            fseek(dat, dataLength, SEEK_CUR);
-        }
-        break;
-
-    case OP_LEQ:
-        while ((check = fread(result, 1, size, dat)) > 0)
-        {
-            if (strcmp(result, filter->key1) <= 0)
-            {
-                EntryPointer pos = ftell(dat) - start - size;
-                SetEntry_insert(resultSet, pos);
-            }
-            fseek(dat, dataLength, SEEK_CUR);
-        }
-        break;
-
-    case OP_GEQ:
-        while ((check = fread(result, 1, size, dat)) > 0)
-        {
-            if (strcmp(result, filter->key1) >= 0)
-            {
-                EntryPointer pos = ftell(dat) - start - size;
-                SetEntry_insert(resultSet, pos);
-            }
-            fseek(dat, dataLength, SEEK_CUR);
-        }
-        break;
-
-    case OP_BETW:
-        while ((check = fread(result, 1, size, dat)) > 0)
-        {
-            if (strcmp(result, filter->key1) > 0 && strcmp(result, filter->key2) < 0)
-            {
-                EntryPointer pos = ftell(dat) - start - size;
-                SetEntry_insert(resultSet, pos);
-            }
-            fseek(dat, dataLength, SEEK_CUR);
-        }
-        break;
-
-    default:
-        assert(false && "Requete inconnue");
-        break;
+        fseek(dat, dataLength, SEEK_CUR);
     }
+}
+
+void Table_printSearchResult(SetEntry* self, Table* table)
+{
+    Entry* newEntry = Entry_create(table);
+    SetEntryIter* iter = SetEntryIter_create(self);
+    assert(iter && newEntry);
+
+    while (SetEntryIter_isValid(iter))
+    {
+        Table_readEntry(table, newEntry, iter->curr->data);
+        Entry_print(newEntry);
+
+        SetEntryIter_next(iter);
+    }
+    printf("\n");
+
+    Entry_destroy(newEntry);
+    SetEntryIter_destroy(iter);
 }
 
 
@@ -363,39 +340,18 @@ void Table_insertEntry(Table *self, Entry *entry)
     
     FILE* dat = self->dataFile;
     assert(dat);
-    rewind(dat);
-    if (self->nextFreePtr != INVALID_POINTER)
+
+    if (self->nextFreePtr == INVALID_POINTER)
     {
-        //recuperation de la prochaine entree libre
-        fseek(dat, self->nextFreePtr, SEEK_SET);
-        fread(&self->nextFreePtr, sizeof(uint64_t), 1, dat);
-        if (self->nextFreePtr == -2)
-            self->nextFreePtr = INVALID_POINTER;
-        fseek(dat, -sizeof(uint64_t), SEEK_CUR);
+        EntryPointer newEntryPtr = self->entrySize * self->entryCount;
+        Table_writeEntry(self, entry, newEntryPtr);
+        self->entryCount++;
     }
     else
-        fseek(dat, 0, SEEK_END);
+        Table_writeEntry(self, entry, self->nextFreePtr);
 
-    //Ecriture dans le fichier dat
-    fwrite(&(uint64_t) { -2 }, sizeof(uint64_t), 1, dat);
-    for (int i = 0; i < self->attributeCount; i++)
-    {
-        uint64_t size = self->attributes[i].size;
-        fwrite(entry->values[i], size, 1, dat);
-    }
-    fflush(dat);
-    self->entryCount++;
 
-    //edition du fichier .tbl (nombre d'entrees)
-    char path[512];
-    strncpy(path, self->folderPath, 512 - MAX_NAME_SIZE - 4);
-    strcat(path, self->name);
-    strcat(path, ".tbl");
-    FILE* tbl = fopen(path, "rb+");
-    fseek(tbl, -2 * sizeof(uint64_t), SEEK_END);
-    fwrite(&self->entryCount, sizeof(uint64_t), 1, tbl);
-    fclose(tbl);
-
+    Table_writeHeader(self);
     return;
 }
 
@@ -473,6 +429,9 @@ void Entry_destroy(Entry *self)
 
 void Entry_print(Entry *self)
 {
+    if (!self)
+        return;
     for (int i = 0; i < self->attributeCount; i++)
-        printf("%s\n", self->values[i]);
+        printf("%s\t", self->values[i]);
+    printf("\n");
 }

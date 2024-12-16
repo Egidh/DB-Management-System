@@ -1,20 +1,2 @@
-table load : 
-	quoi à ouvrir
-	comment récupérer dataFile
-
-create : 
-	quoi à laisser ouvert
-
-.dat : 
-	8 premier octets (-2)
-
-insertEntry : 
-	comment éditer le tbl
-	à quoi sert exactement la fonction
-
-table search:
-	comment signifier aucun retour
-
-remove entry :
-	comment ne pas avoir les CCCCCCCCCC
-	
+Filter Test :
+	OPEQ : pourquoi <= et >= si ==

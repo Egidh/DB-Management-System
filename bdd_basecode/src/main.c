@@ -7,7 +7,29 @@
 #include "Settings.h"
 #include "Table.h"
 
+//load from file
 #if 1
+int main(int argc, char** argv)
+{
+    Table* table = Table_load("psittamulgiformes.tbl", "../data/intro/");
+
+    Filter filter = { 0, OP_BETW, "Cherry", "Pepsi" };
+    SetEntry* results = SetEntry_create();
+    Table_search(table, &filter, results);
+
+    Table_printSearchResult(results, table);
+
+    Table_debugPrint(table);
+
+    SetEntry_destroy(results);
+    Table_destroy(table);
+
+    return EXIT_SUCCESS;
+}
+#endif
+
+//create from scratch
+#if 0
 int main(int argc, char** argv)
 {
     //Table* table = Table_load("psittamulgiformes.tbl", "../data/intro/");
@@ -27,13 +49,14 @@ int main(int argc, char** argv)
     Entry* result = Entry_create(table);
     if (entry->root)
         Table_readEntry(table, result, entry->root->data);
-    Entry_print(result);
+    else printf("not found\n");
 
-    Table_removeEntry(table, entry->root->data);
+    Entry_print(result);
 
     Table_debugPrint(table);
 
     Entry_destroy(result);
+    Entry_destroy(cherry);
     SetEntry_destroy(entry);
     Table_destroy(table);
 

@@ -185,6 +185,13 @@ void Table_destroy(Table *self);
 /// @param resultSet ensemble auquel les résultats sont ajoutés.
 void Table_search(Table *self, Filter *filter, SetEntry *resultSet);
 
+/// <summary>
+/// Affiche les differents attributs des entrees trouvees
+/// </summary>
+/// <param name="self">: L'ensemble d'entrees trouvee lors de la recherche</param> 
+/// <param name="table">: La table relative a la recherche</param> 
+void Table_printSearchResult(SetEntry* self, Table* table);
+
 /// @brief Ajoute une entrée dans une table.
 /// 
 /// @param self la table.
