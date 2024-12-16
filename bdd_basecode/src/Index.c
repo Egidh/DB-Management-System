@@ -83,27 +83,96 @@ void Index_destroyNode(Index *self, NodePointer nodePtr)
 
 Index *Index_create(Table *table, int attributeIndex, char *folderPath)
 {
-    // TODO
-    return NULL;
+    assert(table);
+    Index* newIndex = (Index*)calloc(1, sizeof(Index));
+    assert(newIndex);
+
+    newIndex->table = table;
+    newIndex->attributeIndex = attributeIndex;
+    newIndex->attributeSize = table->attributes[attributeIndex].size;
+    newIndex->rootPtr = INVALID_POINTER;
+    newIndex->nextFreePtr = INVALID_POINTER;
+
+    char path[512];
+    sprintf(path, "%s/%s_%d.idx", folderPath, table->name, attributeIndex);
+    FILE *idx = fopen(path, "wb+");
+    assert(idx);
+
+    newIndex->indexFile = idx;
+    Entry* newEntry = Entry_create(table);
+    for (int i = 0; i < table->entryCount; i++)
+    {
+        Table_readEntry(table, newEntry, i * table->entrySize);
+        Index_insertEntry(newIndex, newEntry->values[attributeIndex], i * (sizeof(uint64_t[8]) + newIndex->attributeSize));
+    }
+    
+    return newIndex;
 }
 
-void Index_destroy(Index *self)
+void Index_destroy(Index* self)
 {
-    // TODO
+    if (!self) return;
+    fclose(self->indexFile);
+    free(self);
 }
 
 Index *Index_load(
     Table* table, int attributeIndex, char* folderPath,
     NodePointer rootPtr, NodePointer nextFreePtr)
 {
-    // TODO
-    return NULL;
+    char path[512];
+    sprintf(path, "%s/%s_%d.idx", folderPath, table->name, attributeIndex);
+    FILE* idx = fopen(path, "wb+");
+    assert(idx);
+
+    Index* newIndex = (Index*)calloc(1, sizeof(Index));
+    newIndex->attributeIndex = attributeIndex;
+    newIndex->attributeSize = table->attributes[attributeIndex].size;
+    newIndex->indexFile = idx;
+    newIndex->nextFreePtr = nextFreePtr;
+    newIndex->rootPtr = rootPtr;
+    newIndex->table = table;
+
+    return newIndex;
 }
 
 void Index_insertEntry(Index *self, char *key, EntryPointer entryPtr)
 {
-    // TODO
+    assert(self);
+
+    FILE* dat = self->table->dataFile;
+    FILE* idx = self->indexFile;
+    assert(dat && idx);
+
+    if (self->rootPtr == INVALID_POINTER)
+    {
+        self->rootPtr = Index_createNode(self, key, entryPtr);
+        return;
+    }
+
+    NodePointer parent = self->rootPtr;
+    IndexNode node;
+    Index_readNode(self, &node, parent);
+    while (node.height > 0)
+    {
+        Index_readNode(self, &node, parent);
+
+        if (strcmp(key, node.key) <= 0)
+            parent = node.leftPtr;
+        else
+            parent = node.rightPtr;
+    }
+    NodePointer newNode = Index_createNode(self, key, entryPtr);
+    
+    if (strcmp(key, node.key) <= 0)
+        Index_setLeftNode(self, parent, newNode);
+    else
+        Index_setRightNode(self, parent, newNode);
+
+    Index_balance(self, newNode);
+        
 }
+
 
 int64_t Index_getNodeHeight(Index *self, NodePointer nodePtr)
 {
@@ -144,7 +213,20 @@ void Index_setLeftNode(Index *self, NodePointer nodePtr, NodePointer leftPtr)
 
 void Index_setRightNode(Index *self, NodePointer nodePtr, NodePointer rightPtr)
 {
-    // TODO
+    assert(nodePtr != INVALID_POINTER);
+
+    IndexNode node;
+    Index_readNode(self, &node, nodePtr);
+    node.rightPtr = rightPtr;
+    Index_writeNode(self, &node, nodePtr);
+
+    if (rightPtr != INVALID_POINTER)
+    {
+        IndexNode right;
+        Index_readNode(self, &right, rightPtr);
+        right.parentPtr = nodePtr;
+        Index_writeNode(self, &right, rightPtr);
+    }
 }
 
 NodePointer Index_getSubtreeMaximum(Index *self, NodePointer nodePtr)

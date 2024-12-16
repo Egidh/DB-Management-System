@@ -8,12 +8,12 @@
 #include "Table.h"
 
 //load from file
-#if 1
+#if 0
 int main(int argc, char** argv)
 {
-    Table* table = Table_load("psittamulgiformes.tbl", "../data/intro/");
+    Table* table = Table_load("psittamulgiformes.tbl", "../data/intro");
 
-    Filter filter = { 0, OP_BETW, "Cherry", "Pepsi" };
+    Filter filter = { 1, OP_EQ, "Ibijau", "Pepsi" };
     SetEntry* results = SetEntry_create();
     Table_search(table, &filter, results);
 
@@ -29,20 +29,20 @@ int main(int argc, char** argv)
 #endif
 
 //create from scratch
-#if 0
+#if 1
 int main(int argc, char** argv)
 {
     //Table* table = Table_load("psittamulgiformes.tbl", "../data/intro/");
-    Table* table = Table_createFromCSV("../data/intro/psittamulgiformes.csv", "../data/intro/");
+    Table* table = Table_createFromCSV("../data/intro/psittamulgiformes.csv", "../data/intro");
 
-    Entry* cherry = Entry_create(table);
+    /*Entry* cherry = Entry_create(table);
     strcpy(cherry->values[0], "Cherry");
     strcpy(cherry->values[1], "Quokka");
     strcpy(cherry->values[2], "36");
 
     Table_insertEntry(table, cherry);
 
-    Filter filter = { 0, OP_EQ, "Cherry", "" };
+    Filter filter = {0, OP_EQ, "Cherry", ""};
     SetEntry* entry = SetEntry_create();
     Table_search(table, &filter, entry);
 
@@ -57,7 +57,7 @@ int main(int argc, char** argv)
 
     Entry_destroy(result);
     Entry_destroy(cherry);
-    SetEntry_destroy(entry);
+    SetEntry_destroy(entry);*/
     Table_destroy(table);
 
     return EXIT_SUCCESS;
