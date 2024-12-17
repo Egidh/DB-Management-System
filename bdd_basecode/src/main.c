@@ -32,8 +32,8 @@ int main(int argc, char** argv)
 #if 1
 int main(int argc, char** argv)
 {
-    //Table* table = Table_load("psittamulgiformes.tbl", "../data/intro/");
-    Table* table = Table_createFromCSV("../data/intro/psittamulgiformes.csv", "../data/intro");
+    Table* table = Table_load("psittamulgiformes.tbl", "../data/intro/");
+    //Table* table = Table_createFromCSV("../data/intro/psittamulgiformes.csv", "../data/intro");
 
     /*Entry* cherry = Entry_create(table);
     strcpy(cherry->values[0], "Cherry");

@@ -106,6 +106,11 @@ Index *Index_create(Table *table, int attributeIndex, char *folderPath)
         Table_readEntry(table, newEntry, entryPointer);
         Index_insertEntry(newIndex, newEntry->values[attributeIndex], entryPointer);
     }
+
+    Entry_destroy(newEntry);
+    
+    Index_debugPrint(newIndex, 0, newIndex->rootPtr);
+    printf("\n\n");
     
     return newIndex;
 }
@@ -121,9 +126,14 @@ Index *Index_load(
     Table* table, int attributeIndex, char* folderPath,
     NodePointer rootPtr, NodePointer nextFreePtr)
 {
+    if(rootPtr == INVALID_POINTER)
+    {
+        printf("Invalid pointer to root !\n");
+        return NULL;
+    }
     char path[512];
     sprintf(path, "%s/%s_%d.idx", folderPath, table->name, attributeIndex);
-    FILE* idx = fopen(path, "wb+");
+    FILE* idx = fopen(path, "rb+");
     assert(idx);
 
     Index* newIndex = (Index*)calloc(1, sizeof(Index));
@@ -133,6 +143,8 @@ Index *Index_load(
     newIndex->nextFreePtr = nextFreePtr;
     newIndex->rootPtr = rootPtr;
     newIndex->table = table;
+
+    Index_debugPrint(newIndex, 0, rootPtr);
 
     return newIndex;
 }
@@ -146,6 +158,7 @@ void Index_insertEntry(Index* self, char* key, EntryPointer entryPtr)
     if (self->rootPtr == INVALID_POINTER)
     {
         self->rootPtr = nodePtr;
+        Index_updateNode(self, self->rootPtr);
         return;
     }
 
@@ -403,7 +416,7 @@ void Index_debugPrintRec(Index *self, NodePointer nodePtr, int depth, int isLeft
         if (isLeft) printf("  \\-");
         else printf("  /-");
     }
-    printf("[%s] : %ld\n", (long long)(node.key), node.height);
+    printf("[%s] : %ld\n", (node.key), node.height);
 
     Index_debugPrintRec(self, node.leftPtr, depth + 1, true);
 }
@@ -411,7 +424,7 @@ void Index_debugPrintRec(Index *self, NodePointer nodePtr, int depth, int isLeft
 void Index_debugPrint(Index *self, int depth, NodePointer nodePtr)
 {
     if (nodePtr == INVALID_POINTER) return;
-    Index_debugPrintRec(self, self->rootPtr, 0, true);
+    Index_debugPrintRec(self, nodePtr, 0, true);
 }
 
 void Index_searchRec(Index *self, NodePointer nodePtr, Filter *filter, SetEntry *resultSet)

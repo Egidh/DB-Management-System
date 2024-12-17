@@ -75,13 +75,15 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
     fscanf(csv, "%[^;];%d;\n", table->name, &table->attributeCount);
     table->attributes = (Attribute*)calloc(table->attributeCount, sizeof(Attribute));
     table->entrySize = sizeof(uint64_t);
+    char* toIndex = NULL;
+    toIndex = (char*)calloc(table->attributeCount, sizeof(char));
+    assert(toIndex);
     for (int i = 0; i < table->attributeCount; i++)
     {
         Attribute* attribute = table->attributes + i;
         attribute->id = i;
-        char tmp;
 
-        fscanf(csv, "%[^;];%lu;%c;\n", attribute->name, &attribute->size, &tmp);
+        fscanf(csv, "%63[^;];%lu;%c;\n", attribute->name, &attribute->size, toIndex + i);
 
         table->entrySize += attribute->size;
     }
@@ -92,8 +94,7 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
     char path[512];
     snprintf(path, 512, "%s/%s.tbl", folderPath, table->name);
 
-    //Ecriture du header du fichier tbl
-    Table_writeHeader(table);
+
 
     ///ouverture du fichier dat
     snprintf(path, 512, "%s/%s.dat", folderPath, table->name);
@@ -125,19 +126,23 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
 
     fclose(csv);
 
-
-    //Creation de l'index
+    //creation de l'index
     for (int i = 0; i < table->attributeCount; i++)
     {
         Attribute* attribute = table->attributes + i;
-        attribute->index = Index_create(table, i, table->folderPath);
-        printf("\n\n");
 
-        assert(attribute->index);
-        fclose(table->attributes[i].index->indexFile);
+        if (toIndex[i])
+        {
+            attribute->index = Index_create(table, i, table->folderPath);
+            printf("%s\n", attribute->name);
+
+            assert(attribute->index);
+        }
     }
-    
+    free(toIndex);
 
+    //Ecriture du header du fichier tbl
+    Table_writeHeader(table);
 
     return table;
 }
@@ -145,8 +150,8 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
 void Table_writeHeader(Table *self)
 {
     //Initialisation du chemin d'ecriture
-    char path[512];
-    snprintf(path, 512, "%s/%s.tbl", self->folderPath, self->name);
+    char path[580];
+    snprintf(path, sizeof(path), "%s/%s.tbl", self->folderPath, self->name);
 
 
     //ouverture du fichier
@@ -166,7 +171,7 @@ void Table_writeHeader(Table *self)
 
         fwrite(attribute->name, MAX_NAME_SIZE, 1, tbl);
         fwrite(&attribute->size, sizeof(uint64_t), 1, tbl);
-        fwrite(&(uint64_t) { -1 }, sizeof(uint64_t), 1, tbl);
+        fwrite(&attribute->index->rootPtr, sizeof(uint64_t), 1, tbl);
         fwrite(&(uint64_t) { -1 }, sizeof(uint64_t), 1, tbl);
 
     }
@@ -192,6 +197,7 @@ Table *Table_load(char *tblFilename, char *folderPath)
         printf("pas de .tbl\n");
     assert(tbl);
 
+
     //Creation et initialisation d'une structure Table
     Table* table = NULL;
     table = (Table*)calloc(1, sizeof(Table));
@@ -204,15 +210,18 @@ Table *Table_load(char *tblFilename, char *folderPath)
     fread(table->name, MAX_NAME_SIZE, 1, tbl);
     fread(&table->attributeCount, sizeof(int), 1, tbl);
     table->attributes = (Attribute*)calloc(table->attributeCount, sizeof(Attribute));
-    void* tmp = calloc(2, sizeof(uint64_t));
+    void* tmp = calloc(1, sizeof(uint64_t));
     table->entrySize = sizeof(EntryPointer);
+    uint64_t* indexRoot = NULL;
+    indexRoot = (uint64_t*)calloc(table->attributeCount, sizeof(uint64_t));
     for (int i = 0; i < table->attributeCount; i++)
     {
         Attribute* attribute = table->attributes + i;
 
         fread(&attribute->name, MAX_NAME_SIZE, 1, tbl);
         fread(&attribute->size, sizeof(uint64_t), 1, tbl);
-        fread(tmp, sizeof(uint64_t), 2, tbl); //skip les parties concernant l'index    
+        fread(indexRoot + i, sizeof(uint64_t), 1, tbl);
+        fread(tmp, sizeof(uint64_t), 1, tbl); //skip la partie concernant les entrees libres  
         attribute->id = i;
         table->entrySize += attribute->size;
     }
@@ -232,13 +241,14 @@ Table *Table_load(char *tblFilename, char *folderPath)
 
     for (int i = 0; i < table->attributeCount; i++)
     {
-        if (table->attributes[i].index)
+        Attribute* attribute = table->attributes + i;
+        if (indexRoot[i] != INVALID_POINTER)
         {
             printf("Loading Index\n");
-            table->attributes[i].index = Index_load(table, i, table->folderPath, )
+            attribute->index = Index_load(table, i, table->folderPath, indexRoot[i], -1);
         }
     }
-
+    free(indexRoot);
     return table;
 }
 
@@ -275,6 +285,11 @@ void Table_destroy(Table *self)
     if (!self) return;
     if(self->dataFile)
         fclose(self->dataFile);
+    
+    for (int i = 0; i < self->attributeCount; i++)
+    {
+        if (self->attributes[i].index) Index_destroy(self->attributes[i].index);
+    }
     free(self->attributes);
     free(self);
 }
