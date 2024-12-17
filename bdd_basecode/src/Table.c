@@ -110,7 +110,10 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
     for (int i = 0; i < table->entryCount; i++)
     {
         for (int j = 0; j < newEntry->attributeCount; j++)
+        {
+            memset(newEntry->values[j], 0, table->attributes[j].size);
             fscanf(csv, "%[^;];", newEntry->values[j]);
+        }
         
         newEntry->nextFreePtr = -2;
         Table_writeEntry(table, newEntry, i * table->entrySize);
@@ -128,6 +131,8 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
     {
         Attribute* attribute = table->attributes + i;
         attribute->index = Index_create(table, i, table->folderPath);
+        printf("\n\n");
+
         assert(attribute->index);
         fclose(table->attributes[i].index->indexFile);
     }
@@ -224,6 +229,15 @@ Table *Table_load(char *tblFilename, char *folderPath)
 
     table->dataFile = fopen(path, "rb+");
     assert(table->dataFile);
+
+    for (int i = 0; i < table->attributeCount; i++)
+    {
+        if (table->attributes[i].index)
+        {
+            printf("Loading Index\n");
+            table->attributes[i].index = Index_load(table, i, table->folderPath, )
+        }
+    }
 
     return table;
 }
