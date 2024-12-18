@@ -1,7 +1,7 @@
 # Fichiers spécifiques
 _bin
 _build
-data
+./data
 toask.txt
 
 

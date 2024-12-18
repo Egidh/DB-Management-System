@@ -425,14 +425,32 @@ void Index_debugPrint(Index *self, int depth, NodePointer nodePtr)
 void Index_searchRec(Index *self, NodePointer nodePtr, Filter *filter, SetEntry *resultSet)
 {
     if (nodePtr == INVALID_POINTER) return;
-    // TODO
+    
+    IndexNode node;
+    Index_readNode(self, &node, nodePtr);
+
+    int res = Filter_test(filter, node.key);
+    if (res & FILTER_FOUND) SetEntry_insert(resultSet, node.entryPtr);
+    if (res & FILTER_SEARCH_LEFT) Index_searchRec(self, node.leftPtr, filter, resultSet);
+    if (res & FILTER_SEARCH_RIGHT) Index_searchRec(self, node.rightPtr, filter, resultSet);
 }
 
 NodePointer Index_searchEntryRec(Index *self, char *key, EntryPointer entryPtr, NodePointer nodePtr)
 {
     if (nodePtr == INVALID_POINTER) return INVALID_POINTER;
-    // TODO
-    return INVALID_POINTER;
+    
+    IndexNode node;
+    Index_readNode(self, &node, nodePtr);
+
+    int comp = strcmp(node.key, key);
+    if (comp == 0 && node.entryPtr == entryPtr) return nodePtr;
+    
+    if (comp > 0)
+        nodePtr = node.leftPtr;
+    else if (comp < 0)
+        nodePtr = node.rightPtr;
+
+    return Index_searchEntryRec(self, key, entryPtr, nodePtr);
 }
 
 NodePointer Index_searchEntry(Index *self, char *key, EntryPointer entryPtr)

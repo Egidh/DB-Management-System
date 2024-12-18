@@ -10,7 +10,14 @@
 int Filter_test(Filter *self, char *nodeKey)
 {
     int cmp1 = strcmp(nodeKey, self->key1);
-    int cmp2 = strcmp(nodeKey, self->key2);
+    int cmp2;
+    if (self->key2) cmp2 = strcmp(nodeKey, self->key2);
+    else if (self->requestOp == OP_BETW) return -1;
+    if (self->requestOp == OP_BETW && (strcmp(self->key1, self->key2) > 0)) {
+        int tmp = cmp1;
+        cmp1 = cmp2;
+        cmp2 = tmp;
+    }
 
     int res = 0;
     switch (self->requestOp)
@@ -22,29 +29,29 @@ int Filter_test(Filter *self, char *nodeKey)
         break;
 
     case OP_LT:
-        if (cmp1 < 0) res |= FILTER_FOUND;
+        if (cmp1 < 0) res = 7;
         if (cmp1 >= 0) res |= FILTER_SEARCH_LEFT;
         break;
         
     case OP_GT:
-        if (cmp1 > 0) res |= FILTER_FOUND;
+        if (cmp1 > 0) res = 7;
         if (cmp1 <= 0) res |= FILTER_SEARCH_RIGHT;
         break;
 
     case OP_LEQ:
-        if (cmp1 <= 0) res |= FILTER_FOUND;
-        if (cmp1 >= 0) res |= FILTER_SEARCH_LEFT;
+        if (cmp1 <= 0) res = 7;
+        if (cmp1 > 0) res |= FILTER_SEARCH_LEFT;
         break;
 
     case OP_GEQ:
-        if (cmp1 >= 0) res |= FILTER_FOUND;
-        if (cmp1 <= 0) res |= FILTER_SEARCH_RIGHT;
+        if (cmp1 >= 0) res = 7;
+        if (cmp1 < 0) res |= FILTER_SEARCH_RIGHT;
         break;
 
     case OP_BETW:
-        if (cmp1 >= 0 && cmp2 <= 0) res |= FILTER_FOUND;
-        if (cmp1 <= 0) res |= FILTER_SEARCH_RIGHT;
+        if (cmp1 >= 0 && cmp2 <= 0 ) res = 7;
         if (cmp1 >= 0) res |= FILTER_SEARCH_LEFT;
+        if (cmp2 <= 0) res |= FILTER_SEARCH_RIGHT;
         break;
 
     default:
@@ -299,36 +306,30 @@ void Table_destroy(Table *self)
 
 void Table_search(Table *self, Filter *filter, SetEntry *resultSet)
 {
-    char nodeKey[512];
-    uint64_t size = self->attributes[filter->attributeIndex].size;
-    int dataLength = 8; //huit premiers octets (pointeur)
-    uint64_t start = 8;
-    for (int i = 0; i < self->attributeCount; i++)
-    {
-        if (i < filter->attributeIndex)
-            start += self->attributes[i].size;
+    assert(self && filter);
 
-        dataLength += self->attributes[i].size;
+    if (!resultSet) resultSet = SetEntry_create();
+
+    Entry *testedEntry = Entry_create(self);
+    
+    Index* index = self->attributes[filter->attributeIndex].index;
+
+    if (index)
+    {
+        Index_searchRec(index, index->rootPtr, filter, resultSet);
     }
-    dataLength -= size;
-
-    FILE* dat = NULL;
-    dat = self->dataFile;
-    assert(dat && "dat missing");
-
-    FSeek(dat, start, SEEK_SET);
-   
-    int check;
-
-    while ((check = fread(nodeKey, 1, size, dat)) > 0)
+    else
     {
-        if (Filter_test(filter, nodeKey) & FILTER_FOUND)
+        for (int i = 0; i < self->entryCount; i++)
         {
-            EntryPointer pos = ftell(dat) - start - size;
-            SetEntry_insert(resultSet, pos);
+            EntryPointer entryPtr = i * self->entrySize;
+            Table_readEntry(self, testedEntry, entryPtr);
+
+            if (Filter_test(filter, testedEntry->values[filter->attributeIndex]) & FILTER_FOUND)
+                SetEntry_insert(resultSet, entryPtr);
         }
-        FSeek(dat, dataLength, SEEK_CUR);
     }
+    Entry_destroy(testedEntry);
 }
 
 void Table_printSearchResult(SetEntry* self, Table* table)
@@ -339,7 +340,8 @@ void Table_printSearchResult(SetEntry* self, Table* table)
 
     while (SetEntryIter_isValid(iter))
     {
-        Table_readEntry(table, newEntry, iter->curr->data);
+        EntryPointer entryPtr = SetEntryIter_getValue(iter);
+        Table_readEntry(table, newEntry, entryPtr);
         Entry_print(newEntry);
 
         SetEntryIter_next(iter);
@@ -357,10 +359,10 @@ void Table_insertEntry(Table *self, Entry *entry)
     
     FILE* dat = self->dataFile;
     assert(dat);
+    EntryPointer newEntryPtr = self->entrySize * self->entryCount;
 
     if (self->nextFreePtr == INVALID_POINTER)
     {
-        EntryPointer newEntryPtr = self->entrySize * self->entryCount;
         Table_writeEntry(self, entry, newEntryPtr);
         self->entryCount++;
     }
@@ -369,6 +371,13 @@ void Table_insertEntry(Table *self, Entry *entry)
 
 
     Table_writeHeader(self);
+
+    for (int i = 0; i < self->attributeCount; i++)
+    {
+        Index* index = self->attributes[i].index;
+        if (index)
+            Index_insertEntry(index, entry->values[i], newEntryPtr);
+    }
     return;
 }
 

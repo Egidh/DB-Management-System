@@ -7,21 +7,29 @@
 #include "Settings.h"
 #include "Table.h"
 
+
 //load from file
 #if 1
 int main(int argc, char** argv)
 {
     Table* table = Table_load("psittamulgiformes.tbl", "../data/intro");
 
-    //Filter filter = { 1, OP_EQ, "Ibijau", "Pepsi" };
-    //SetEntry* results = SetEntry_create();
-    //Table_search(table, &filter, results);
+    //Entry* cherry = Entry_create(table);
+    //strcpy(cherry->values[0], "Cherry");
+    //strcpy(cherry->values[1], "Quokka");
+    //strcpy(cherry->values[2], "36");
 
-    //Table_printSearchResult(results, table);
+    //Table_insertEntry(table, cherry);
 
-    //Table_debugPrint(table);
+    Filter filter = { 1, OP_EQ, "Quokka", "Pepsi" };
+    SetEntry* results = SetEntry_create();
+    Table_search(table, &filter, results);
 
-    //SetEntry_destroy(results);
+    Table_printSearchResult(results, table);
+
+    Table_debugPrint(table);
+
+    SetEntry_destroy(results);
     Table_destroy(table);
 
     return EXIT_SUCCESS;
