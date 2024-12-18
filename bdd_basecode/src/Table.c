@@ -75,15 +75,15 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
     fscanf(csv, "%[^;];%d;\n", table->name, &table->attributeCount);
     table->attributes = (Attribute*)calloc(table->attributeCount, sizeof(Attribute));
     table->entrySize = sizeof(uint64_t);
-    char* toIndex = NULL;
-    toIndex = (char*)calloc(table->attributeCount, sizeof(char));
+    int* toIndex = NULL;
+    toIndex = (int*)calloc(table->attributeCount, sizeof(int));
     assert(toIndex);
     for (int i = 0; i < table->attributeCount; i++)
     {
         Attribute* attribute = table->attributes + i;
         attribute->id = i;
 
-        fscanf(csv, "%63[^;];%lu;%c;\n", attribute->name, &attribute->size, toIndex + i);
+        fscanf(csv, "%63[^;];%lu;%d;\n", attribute->name, &attribute->size, toIndex + i);
 
         table->entrySize += attribute->size;
     }
@@ -171,7 +171,10 @@ void Table_writeHeader(Table *self)
 
         fwrite(attribute->name, MAX_NAME_SIZE, 1, tbl);
         fwrite(&attribute->size, sizeof(uint64_t), 1, tbl);
-        fwrite(&attribute->index->rootPtr, sizeof(uint64_t), 1, tbl);
+        if (attribute->index)
+            fwrite(&attribute->index->rootPtr, sizeof(uint64_t), 1, tbl);
+        else
+            fwrite(&(uint64_t) { -1 }, sizeof(uint64_t), 1, tbl);
         fwrite(&(uint64_t) { -1 }, sizeof(uint64_t), 1, tbl);
 
     }
@@ -244,7 +247,7 @@ Table *Table_load(char *tblFilename, char *folderPath)
         Attribute* attribute = table->attributes + i;
         if (indexRoot[i] != INVALID_POINTER)
         {
-            printf("Loading Index\n");
+            //printf("Loading Index\n");
             attribute->index = Index_load(table, i, table->folderPath, indexRoot[i], -1);
         }
     }

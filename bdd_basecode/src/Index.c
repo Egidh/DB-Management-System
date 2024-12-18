@@ -109,9 +109,6 @@ Index *Index_create(Table *table, int attributeIndex, char *folderPath)
 
     Entry_destroy(newEntry);
     
-    Index_debugPrint(newIndex, 0, newIndex->rootPtr);
-    printf("\n\n");
-    
     return newIndex;
 }
 
@@ -143,8 +140,6 @@ Index *Index_load(
     newIndex->nextFreePtr = nextFreePtr;
     newIndex->rootPtr = rootPtr;
     newIndex->table = table;
-
-    Index_debugPrint(newIndex, 0, rootPtr);
 
     return newIndex;
 }

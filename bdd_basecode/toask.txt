@@ -1,2 +1,1 @@
-Filter Test :
-	OPEQ : pourquoi <= et >= si ==
+gérer les cas sans index !!

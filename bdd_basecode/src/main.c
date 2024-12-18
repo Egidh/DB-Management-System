@@ -8,20 +8,20 @@
 #include "Table.h"
 
 //load from file
-#if 0
+#if 1
 int main(int argc, char** argv)
 {
     Table* table = Table_load("psittamulgiformes.tbl", "../data/intro");
 
-    Filter filter = { 1, OP_EQ, "Ibijau", "Pepsi" };
-    SetEntry* results = SetEntry_create();
-    Table_search(table, &filter, results);
+    //Filter filter = { 1, OP_EQ, "Ibijau", "Pepsi" };
+    //SetEntry* results = SetEntry_create();
+    //Table_search(table, &filter, results);
 
-    Table_printSearchResult(results, table);
+    //Table_printSearchResult(results, table);
 
-    Table_debugPrint(table);
+    //Table_debugPrint(table);
 
-    SetEntry_destroy(results);
+    //SetEntry_destroy(results);
     Table_destroy(table);
 
     return EXIT_SUCCESS;
@@ -29,11 +29,11 @@ int main(int argc, char** argv)
 #endif
 
 //create from scratch
-#if 1
+#if 0
 int main(int argc, char** argv)
 {
-    Table* table = Table_load("psittamulgiformes.tbl", "../data/intro/");
-    //Table* table = Table_createFromCSV("../data/intro/psittamulgiformes.csv", "../data/intro");
+    //Table* table = Table_load("psittamulgiformes.tbl", "../data/intro/");
+    Table* table = Table_createFromCSV("../data/intro/psittamulgiformes.csv", "../data/intro");
 
     /*Entry* cherry = Entry_create(table);
     strcpy(cherry->values[0], "Cherry");
