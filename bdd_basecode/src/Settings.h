@@ -18,6 +18,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <conio.h>
+#include <windows.h>
 
 #define AssertNew(ptr) { if (ptr == NULL) { assert(false); abort(); } }
 
