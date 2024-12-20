@@ -75,6 +75,15 @@ int main(int argc, char** argv)
 
 #if 1
 int main(void) {
+    /*HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    for (int k = 1; k < 255; k++)
+    {
+        SetConsoleTextAttribute(hConsole, k);
+        printf("%3d  %s\n", k, "TESTETSTETSTSET");
+    }*/
+
+    SetConsoleCP(CP_UTF8);
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleTitle("BBD - Base de Données");
     
@@ -118,6 +127,12 @@ int main(void) {
     Command *show = command_create("show", "Affiche les tables", "aucuns arguments", 0, 0);
     commands_add(cmds, show);
 
+    Command *ibijau = command_create("ibijau", "Ils sont pas bo", "aucuns arguments", 0, 0);
+    commands_add(cmds, ibijau);
+
+    Command *select = command_create("select", "Sélectionner une table", "select <attribut>", 1, table->attributeCount);
+    commands_add(cmds, select);
+
     const char* selectNames[] = {
         "Table",
         "Data",
@@ -145,6 +160,9 @@ int main(void) {
     char input[MAX_INPUT_SIZE];
     Mode mode = MODE_WRITE;
     bool running = true;
+
+    char autocomplete[100] = { 0 };
+    int index = 0;
 
     ui_displayWelcome();
 

@@ -16,6 +16,8 @@ typedef enum {
     CMD_DELETE,
     CMD_CLEAR,
     CMD_SHOW,
+    CMD_IBIJAU,
+    CMD_SELECT,
     CMD_COUNT
 } CommandCode;
 
@@ -61,6 +63,18 @@ typedef enum {
     MODE_SELECT
 } Mode;
 
+typedef enum {
+    COLOR_BLUE = 1,
+    COLOR_GREEN,
+    COLOR_LIGHT_BLUE,
+    COLOR_RED,
+    COLOR_PURPLE,
+    COLOR_YELLOW,
+    COLOR_WHITE,
+    COLOR_GREY,
+    COLOR_BLACK_BACKGROUND_WHITE = 240,
+} Color;
+
 // Fonctions d'interface utilisateur
 void ui_displayWelcome(void);
 void ui_clearScreen(void);
@@ -100,7 +114,11 @@ void cmd_delete(Table* table, char** args, int argc, const Commands* commands);
 void cmd_print(Table* table);
 void cmd_print_index(Table* table, int indexNum);
 void cmd_show(Table* table);
+void cmd_selectTable(Table* table, char** args, int argc, const Commands* commands);
+void cmd_displayIbijau(void);
 
 // Fonction principale de traitement des commandes
 bool handle_command(Table* table, const char* command, char** args, int argc, const Commands* commands, Mode* mode);
 RequestOp str_to_op(const char* op);
+
+bool get_input();
