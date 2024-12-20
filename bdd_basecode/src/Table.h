@@ -82,7 +82,8 @@ typedef enum FilterRes
 typedef enum Combination
 {
     AND,
-    OR
+    OR,
+    WITHOUT
 }Combination;
 
 /// @brief Teste un filtre avec la clé contenue dans un noeud.

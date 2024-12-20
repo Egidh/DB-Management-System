@@ -362,6 +362,8 @@ void Table_combinationSearch(Table *self, Filter** filters, Combination comb, in
     if (!resultSet) resultSet = SetEntry_create();
 
     SetEntry* tempRes = SetEntry_create();
+    SetEntryIter* iter;
+    SetEntryNode* node = (SetEntryNode*)calloc(1, sizeof(SetEntryNode));
 
     switch (comb)
     {
@@ -373,8 +375,7 @@ void Table_combinationSearch(Table *self, Filter** filters, Combination comb, in
     case AND:
         Table_search(self, filters[0], resultSet);
         Table_search(self, filters[0], tempRes);
-        SetEntryIter* iter = SetEntryIter_create(tempRes);
-        SetEntryNode* node = (SetEntryNode*)calloc(1, sizeof(SetEntryNode));
+        iter = SetEntryIter_create(tempRes);
         while (SetEntryIter_isValid(iter))
         {
             if (!SetEntry_find(resultSet, SetEntryIter_getValue(iter), &node))
@@ -382,15 +383,13 @@ void Table_combinationSearch(Table *self, Filter** filters, Combination comb, in
             
             SetEntryIter_next(iter);
         }
-        free(node);
-        SetEntryIter_destroy(iter);
         break;
 
     case WITHOUT:
         Table_search(self, filters[0], resultSet);
         Table_search(self, filters[0], tempRes);
-        SetEntryIter* iter = SetEntryIter_create(tempRes);
-        SetEntryNode* node = (SetEntryNode*)calloc(1, sizeof(SetEntryNode));
+
+        iter = SetEntryIter_create(tempRes);
         while (SetEntryIter_isValid(iter))
         {
             if (SetEntry_find(resultSet, SetEntryIter_getValue(iter), &node))
@@ -398,8 +397,6 @@ void Table_combinationSearch(Table *self, Filter** filters, Combination comb, in
 
             SetEntryIter_next(iter);
         }
-        free(node);
-        SetEntryIter_destroy(iter);
         break;
 
     default :
@@ -407,6 +404,8 @@ void Table_combinationSearch(Table *self, Filter** filters, Combination comb, in
         resultSet = NULL;
         break;
     }
+    free(node);
+    SetEntryIter_destroy(iter);
     SetEntry_destroy(tempRes);
 }
 
