@@ -10,70 +10,6 @@
 #include "UI.h"
 
 
-//load from file
-#if 0
-int main(int argc, char** argv)
-{
-    Table* table = Table_load("psittamulgiformes.tbl", "../data/intro_1");
-
-    //Entry* cherry = Entry_create(table);
-    //strcpy(cherry->values[0], "Cherry");
-    //strcpy(cherry->values[1], "Quokka");
-    //strcpy(cherry->values[2], "36");
-
-    //Table_insertEntry(table, cherry);
-
-    Filter filter = { 1, OP_EQ, "Quokka", "Pepsi" };
-    SetEntry* results = SetEntry_create();
-    Table_search(table, &filter, results);
-
-    Table_printSearchResult(results, table);
-
-    Table_debugPrint(table);
-
-    SetEntry_destroy(results);
-    Table_destroy(table);
-
-    return EXIT_SUCCESS;
-}
-#endif
-
-//create from scratch
-#if 0
-int main(int argc, char** argv)
-{
-    //Table* table = Table_load("psittamulgiformes.tbl", "../data/intro/");
-    Table* table = Table_createFromCSV("../data/intro_1/psittamulgiformes.csv", "../data/intro_1");
-
-    /*Entry* cherry = Entry_create(table);
-    strcpy(cherry->values[0], "Cherry");
-    strcpy(cherry->values[1], "Quokka");
-    strcpy(cherry->values[2], "36");
-
-    Table_insertEntry(table, cherry);
-
-    Filter filter = {0, OP_EQ, "Cherry", ""};
-    SetEntry* entry = SetEntry_create();
-    Table_search(table, &filter, entry);
-
-    Entry* result = Entry_create(table);
-    if (entry->root)
-        Table_readEntry(table, result, entry->root->data);
-    else printf("not found\n");
-
-    Entry_print(result);
-
-    Table_debugPrint(table);
-
-    Entry_destroy(result);
-    Entry_destroy(cherry);
-    SetEntry_destroy(entry);*/
-    Table_destroy(table);
-
-    return EXIT_SUCCESS;
-}
-#endif
-
 #if 0
 // Exemple de main() :
 // Création d'une table à partir d'un CSV.
@@ -151,7 +87,7 @@ int main(void) {
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleTitle("BBD - Base de Données");
     
-    Table* table = Table_createFromCSV("../data/intro_1/psittamulgiformes.csv", "../data/intro_1");
+    Table* table = Table_createFromCSV("../data/intro/psittamulgiformes.csv", "../data/intro");
     if (!table) {
         ui_displayError("Impossible de créer la table depuis le fichier CSV");
         return 1;
@@ -176,13 +112,13 @@ int main(void) {
     Command *print = command_create("print", "Afficher la table", "aucuns arguments", 0, 0);
     commands_add(cmds, print);
     
-    Command *insert = command_create("insert", "Insérer une entrée dans la table", "insert <attribut1> <attribut2> <attribut3> ...", 3, 0);
+    Command *insert = command_create("insert", "Insérer une entrée dans la table", "insert <attribut1> <attribut2> <attribut3> ...", table->attributeCount, 0);
     commands_add(cmds, insert);
     
-    Command *search = command_create("search", "Rechercher des entrées dans la table", "search <attribut> <opérateur> <valeur> [valeur2]", 3, 1);
+    Command *search = command_create("search", "Rechercher des entrées dans la table", "search <index attribut> <opérateur> <valeur> [valeur2]", 3, 1);
     commands_add(cmds, search);
     
-    Command *delete = command_create("delete", "Supprimer une entrée de la table", "delete <index>", 1, 0);
+    Command *delete = command_create("delete", "Supprimer une  ou plusieurs entrées de la table, selon un attribut", "delete <attribut> <valeur> ", 2, 0);
     commands_add(cmds, delete);
     
     Command *clear = command_create("clear", "Effacer l'écran", "aucuns arguments", 0, 0);

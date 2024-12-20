@@ -7,6 +7,7 @@ void printf_utf8(const wchar_t* message) {
     WriteConsoleW(hConsole, message, wcslen(message), &written, NULL);
 }
 
+
 void ui_displayColoredText(const char* text, Color color) {
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	SetConsoleTextAttribute(hConsole, color);
@@ -293,7 +294,15 @@ void cmd_insert(Table* table, char** args, int argc, const Commands* commands) {
         return;
     }
 
-    printf("Insertion dans la table...\n");
+    Entry *newEntry = Entry_create(table);
+    for (int i = 0; i < table->attributeCount; i++)
+         strcpy(newEntry->values[i], args[i]);
+    
+    Table_insertEntry(table, newEntry);
+    
+    Entry_destroy(newEntry);
+
+    printf("Entree inseree avec succes\n");
 }
 
 void cmd_search(Table* table, char** args, int argc, const Commands* commands) {
@@ -335,7 +344,51 @@ void cmd_delete(Table* table, char** args, int argc, const Commands* commands) {
         return;
     }
 
-    printf("Suppression dans la table...\n");
+    char* attribute = (char*)calloc(MAX_NAME_SIZE, sizeof(char));
+    assert(attribute);
+    char* value = (char*)calloc(MAX_NAME_SIZE, sizeof(char));
+    assert(value);
+
+    strncpy(attribute, args[0], MAX_NAME_SIZE);
+    strncpy(value, args[1], MAX_NAME_SIZE);
+    int idx = -1;
+
+    for (int i = 0; i < table->attributeCount; i++)
+    {
+        if (strcmp(table->attributes[i].name, attribute) == 0)
+        {
+            idx = i;
+            break;
+        }
+    }
+
+    if (idx == -1)
+    {
+        printf("Attribut invalide : %s.\n", attribute);
+        return;
+    }
+
+    Filter removeFilter = { idx, OP_EQ, value, "" };
+    SetEntry* results = SetEntry_create();
+    Table_search(table, &removeFilter, results);
+
+    int entryRemovedCount = 0;
+    SetEntryIter *resultsIter = SetEntryIter_create(results);
+    if (!results->root)
+    {
+        printf("Pas d'entree correspondante : %s", value);
+    }
+    while (SetEntryIter_isValid(resultsIter))
+    {
+        Table_removeEntry(table, resultsIter->curr->data);
+        entryRemovedCount++;
+        SetEntryIter_next(resultsIter);
+    }
+
+    SetEntry_destroy(results);
+    SetEntryIter_destroy(resultsIter);
+
+    printf("Suppression de %d elements reussie\n", entryRemovedCount);
 }
 
 void cmd_print(Table* table) {
@@ -426,13 +479,14 @@ void cmd_show(Table* table) {
        header[i] = table->attributes[i].name;  
    }  
 
-   char ***content = calloc(table->entryCount, sizeof(char**));  
+   char ***content = calloc(table->validEntryCount, sizeof(char**));  
    if (!content) {  
        ui_displayError("Erreur d'allocation de mémoire");  
        return;  
    }  
 
-   for (int i = 0; i < table->entryCount; i++) {  
+   int length = table->validEntryCount;
+   for (int i = 0; i < length; i++) {  
        content[i] = calloc(table->attributeCount, sizeof(char*));  
        if (!content[i]) {  
            ui_displayError("Erreur d'allocation de mémoire");  
@@ -440,18 +494,25 @@ void cmd_show(Table* table) {
        }  
    }  
 
-   Entry* entry = Entry_create(table);  
-   for (int i = 0; i < table->entryCount; i++) {  
+   length = table->validEntryCount;
+   Entry* entry = Entry_create(table);
+   for (int i = 0, k=0; i < length; i++) {
        EntryPointer entryPtr = i * table->entrySize;  
-       Table_readEntry(table, entry, entryPtr);  
+       Table_readEntry(table, entry, entryPtr);
+       if (entry->nextFreePtr != VALID_ENTRY)
+       {
+           length++;
+           continue;
+       }
        for (int j = 0; j < table->attributeCount; j++) {  
-           content[i][j] = strdup(entry->values[j]); 
+           content[k][j] = strdup(entry->values[j]); 
        }  
+       k++;
    }  
 
-   ui_displayTable(table->name, header, table->attributeCount, content, table->entryCount);  
+   ui_displayTable(table->name, header, table->attributeCount, content, table->validEntryCount);  
 
-   for (int i = 0; i < table->entryCount; i++) {  
+   for (int i = 0; i < table->validEntryCount; i++) {  
        for (int j = 0; j < table->attributeCount; j++) {  
            free(content[i][j]);  
        }  
