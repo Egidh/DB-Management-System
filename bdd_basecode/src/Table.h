@@ -229,3 +229,11 @@ void Entry_destroy(Entry *self);
 /// 
 /// @param self l'entrée.
 void Entry_print(Entry *self);
+
+/// @brief Remplace l'entrée de entryPtr par newEntry
+/// 
+/// @param self La table
+/// @param newEntry Les nouvelles données
+/// @param entryPtr La position dans le .dat des anciennes données
+void Table_modifyEntry(Table* self, Entry* newEntry, EntryPointer entryPtr);
+

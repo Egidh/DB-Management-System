@@ -26,7 +26,7 @@ void ui_displayColoredText(const char* text, Color color) {
 }
 
 void ui_displayWelcome(void) {
-    printf_utf8(L"──────────────────────Welcome To The BBD──────────────────────\n");
+    printf_utf8(L"──────────────────────Bienvenue Dans l'iBDD (ibijauBDD)──────────────────────\n");
     printf("Tapez 'help' pour la liste des commandes.\n\n");
 }
 
@@ -320,22 +320,37 @@ void cmd_search(Table* table, char** args, int argc, const Commands* commands) {
         ui_displayError("Arguments invalides pour la recherche");
         return;
     }
-    printf("Recherche dans la table...\n");
-
-    for (int i = 0; i < argc; i++) {
-        printf("%s\n", args[i]);
-    }
 
     Filter filter = { Table_findAttribute(table, args[0]), str_to_op(args[1]), args[2], 0};
+    if (filter.attributeIndex == -1)
+    {
+        printf("\nErreur: %s Attribut invalide\n", args[0]);
+        return;
+    }
+
+    if(filter.requestOp == -1)
+    {
+        printf("\nErreur : %s operation non reconnue\n", args[1]);
+        return;
+    }
 
     if (strcmp(args[1], "OP_BETW") == 0) {
-        filter.key2 = args[3];
+        if (argc == 4)
+            filter.key2 = args[3];
+        else
+        {
+            printf("\nArgument manquant pour OP_BETW !\nsearch Attribut OP_BETW key_1 key_2\n");
+            return;
+        }
     }
+
+    printf("\nRecherche dans la table...\n\n");
 
     SetEntry* result = SetEntry_create();
     Table_search(table, &filter, result);
 
-    printf("Result count = %d\n", SetEntry_size(result));
+    printf("%d entree trouvees :\n\n", SetEntry_size(result));
+    Table_printSearchResult(result, table);
 }
 
 RequestOp str_to_op(const char* op) {
@@ -345,6 +360,7 @@ RequestOp str_to_op(const char* op) {
     if (strcmp(op, "OP_GEQ") == 0) return OP_GEQ;
     if (strcmp(op, "OP_GT") == 0) return OP_GT;
     if (strcmp(op, "OP_BETW") == 0) return OP_BETW;
+
     return -1;
 }
 
@@ -629,3 +645,25 @@ void cmd_selectTable(Table* table, char** args, int argc, const Commands* comman
     Entry_destroy(entry);
 }
 
+
+//void cmd_modify(Table* table, char** args, int argc)
+//{
+//    if (!table || !args)
+//    {
+//        printf("Erreur lors de la modification de l'entree\n");
+//        return;
+//    }
+//
+//    Entry* oldEntry = Entry_create(table);
+//    Entry* newEntry = Entry_create(table);
+//
+//    for (int i = 0; i < table->attributeCount; i++)
+//    {
+//        strcpy(oldEntry->values[i], args[i]);
+//        strcpy(newEntry->values[i], args[i + table->attributeCount]);
+//    }
+// 
+//
+//
+//    Table_modifyEntry(table, newEntry, entryPtr);
+//}

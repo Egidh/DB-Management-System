@@ -133,6 +133,10 @@ bool handle_command(Table* table, const char* command, char** args, int argc,
         cmd_selectTable(table, args, argc, commands);
         break;
 
+    //case CMD_MODIFY:
+    //    cmd_modify();
+    //    break;
+
     default:
         ui_displayError("Commande non implémentée");
         break;
