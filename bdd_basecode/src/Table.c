@@ -64,6 +64,7 @@ int Filter_test(Filter *self, char *nodeKey)
 
 Table *Table_createFromCSV(char *csvPath, char *folderPath)
 {
+    printf("Creation de la table\n");
     //Creation et initialisation d'une structure Table
     Table *table = (Table*)calloc(1, sizeof(Table));
     if (!table)
@@ -101,7 +102,7 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
     snprintf(path, 512, "%s/%s.tbl", folderPath, table->name);
 
 
-
+    printf("Creation du fichier dat\n");
     ///ouverture du fichier dat
     snprintf(path, 512, "%s/%s.dat", folderPath, table->name);
     FILE* dat = fopen(path, "wb+");
@@ -133,6 +134,8 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
 
     fclose(csv);
 
+
+    printf("Creation des index\n");
     //creation de l'index
     for (int i = 0; i < table->attributeCount; i++)
     {
@@ -150,6 +153,8 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
 
     //Ecriture du header du fichier tbl
     Table_writeHeader(table);
+
+    printf("Table creee\n");
 
     return table;
 }

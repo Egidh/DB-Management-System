@@ -58,6 +58,12 @@ void ui_displayArguments(Command* cmd) {
     ui_displayColoredText(buffer, COLOR_YELLOW);
 }
 
+void ui_displayExample(Command* cmd) {
+	char buffer[256];
+	sprintf(buffer, "Exemple : %s\n", cmd->example);
+	ui_displayColoredText(buffer, COLOR_BLUE);
+}
+
 void ui_displayTable(char* title, char** header, int headerSize, char*** content, int contentSize) {  
    printf("Table : %s\n", title);  
 
@@ -225,6 +231,7 @@ void selects_destroy(Selects* selects) {
 
 void selects_displayMenu(const Selects* selects, int currentSelection) {
     ui_clearScreen();
+    ui_displayWelcome();
     printf_utf8(L"Utilisez les flèches ↑↓ pour naviguer, Entrée pour sélectionner, Échap pour revenir.\n\n");
     printf_utf8(L"Sélectionnez une option :\n");
 
@@ -339,12 +346,12 @@ void cmd_search(Table* table, char** args, int argc, const Commands* commands) {
 }
 
 RequestOp str_to_op(const char* op) {
-    if (strcmp(op, "OP_LT") == 0) return OP_LT;
-    if (strcmp(op, "OP_LEQ") == 0) return OP_LEQ;
-    if (strcmp(op, "OP_EQ") == 0) return OP_EQ;
-    if (strcmp(op, "OP_GEQ") == 0) return OP_GEQ;
-    if (strcmp(op, "OP_GT") == 0) return OP_GT;
-    if (strcmp(op, "OP_BETW") == 0) return OP_BETW;
+    if (strcmp(op, "<") == 0) return OP_LT;
+    if (strcmp(op, "<=") == 0) return OP_LEQ;
+    if (strcmp(op, "==") == 0) return OP_EQ;
+    if (strcmp(op, ">=") == 0) return OP_GEQ;
+    if (strcmp(op, ">") == 0) return OP_GT;
+    if (strcmp(op, "<>") == 0) return OP_BETW;
     return -1;
 }
 
@@ -530,6 +537,8 @@ void cmd_show(Table* table) {
    }  
    free(content);  
    free(header);  
+
+   Entry_destroy(entry);
 }
 
 void cmd_selectTable(Table* table, char** args, int argc, const Commands* commands) {
@@ -629,3 +638,231 @@ void cmd_selectTable(Table* table, char** args, int argc, const Commands* comman
     Entry_destroy(entry);
 }
 
+void cmd_sort(Table* table, char** args, int argc, const Commands* commands) {
+	if (!table || !args || !commands) {
+		ui_displayError("Arguments invalides pour la sélection de table");
+		return;
+	}
+
+	int id = Table_findAttribute(table, args[0]);
+	if (id == -1) {
+		ui_displayError("L'attribut n'existe pas");
+		return;
+	}
+
+	Index* index = table->attributes[id].index;
+	if (!index) {
+		ui_displayError("L'index n'existe pas");
+		return;
+	}
+
+    if (strcmp(args[1], "asc") == 0) {
+		Index_sort(index, index->rootPtr, 1);
+	} else if (strcmp(args[1], "desc") == 0) {
+		Index_sort(index, index->rootPtr, 0);
+	} else {
+        char *buffer = calloc(100, sizeof(char));
+        sprintf(buffer, "Argument %s invalide", args[1]);
+		ui_displayError(buffer);
+        free(buffer);
+		return;
+	}
+
+	printf("Tri de l'index de l'attribut %s effectué\n", args[0]);
+}
+
+void cmd_export(Table* table, char** args, int argc, const Commands* commands) {
+    FILE* file = fopen(args[0], "w");
+    if (!file) {
+        ui_displayError("Impossible de créer le fichier d'export");
+        return;
+    }
+
+    fprintf(file, "%s;%d\n", table->name, table->attributeCount);
+    printf("%s;%d\n", table->name, table->attributeCount);
+
+    for (int i = 0; i < table->attributeCount; i++) {
+        fprintf(file, "%s;%lu;%lu\n", table->attributes[i].name, table->attributes[i].size, table->attributes[i].index ? 1 : 0);
+        printf("%s;%lu;%lu\n", table->attributes[i].name, table->attributes[i].size, table->attributes[i].index ? 1 : 0);
+    }
+
+    fprintf(file, "%d;\n", table->entryCount);
+    printf("%d;\n", table->entryCount);
+
+    Entry* entry = Entry_create(table);
+    for (int i = 0; i < table->entryCount; i++) {
+        EntryPointer entryPtr = i * table->entrySize;
+        Table_readEntry(table, entry, entryPtr);
+
+        if (entry->nextFreePtr == VALID_ENTRY) {
+            for (int j = 0; j < table->attributeCount; j++) {
+                fprintf(file, "%s%s", entry->values[j], j < table->attributeCount - 1 ? ";" : "\n");
+                printf("%s%s", entry->values[j], j < table->attributeCount - 1 ? ";" : "\n");
+            }
+        }
+    }
+
+    Entry_destroy(entry);
+    fclose(file);
+    ui_displaySuccess("Export terminé avec succès");
+}
+
+void cmd_count(Table* table, char** args, int argc, const Commands* commands) {
+    if (!table) {
+        ui_displayError("Table invalide");
+        return;
+    }
+
+    if (argc == 0) {
+        printf("Nombre total d'entrées : %d\n", table->validEntryCount);
+        return;
+    }
+
+    if (argc < 2) {
+        ui_displayError("Usage: count <colonne> <valeur>");
+        return;
+    }
+
+    int attributeIndex = Table_findAttribute(table, args[0]);
+    if (attributeIndex == -1) {
+        ui_displayError("Colonne invalide");
+        return;
+    }
+
+    Filter filter = { attributeIndex, OP_EQ, args[1], NULL };
+    SetEntry* results = SetEntry_create();
+    Table_search(table, &filter, results);
+
+    printf("Nombre d'entrees ou %s = %s : %d\n", args[0], args[1], SetEntry_size(results));
+
+    SetEntry_destroy(results);
+}
+
+void cmd_stats(Table* table, char** args, int argc, const Commands* commands) {
+    if (!table) {
+        ui_displayError("Table invalide");
+        return;
+    }
+
+    printf("Statistiques de la table %s :\n", table->name);
+    printf("Nombre total d'entrées : %d\n", table->validEntryCount);
+    printf("Nombre total d'attributs : %d\n", table->attributeCount);
+    printf("Taille d'une entrée : %d octets\n", table->entrySize);
+    printf("Indices créés :\n");
+
+    for (int i = 0; i < table->attributeCount; i++) {
+        if (table->attributes[i].index) {
+            printf("- %s\n", table->attributes[i].name);
+        }
+    }
+}
+
+void cmd_structure(Table* table) {
+    if (!table) {
+        ui_displayError("Table invalide");
+        return;
+    }
+
+    printf("Structure de la table %s :\n\n", table->name);
+    printf("%-20s %s\n", "Attribut", "Indexé");
+    printf("----------------------------------------\n");
+
+    for (int i = 0; i < table->attributeCount; i++) {
+        printf("%-20s %s\n",
+            table->attributes[i].name,
+            table->attributes[i].index ? "Oui" : "Non");
+    }
+}
+
+void create_configFile(char* folderPath, char* csvPath) {
+    if (!folderPath || !csvPath) {
+        ui_displayError("Chemins invalides");
+        return;
+    }
+
+    FILE* file = fopen("config.cfg", "w");
+    if (!file) {
+        ui_displayError("Impossible de créer le fichier de configuration");
+        return;
+    }
+
+    fprintf(file, "folderPath=%s\n", folderPath);
+    fprintf(file, "csvPath=%s\n", csvPath);
+    fclose(file);
+}
+
+void load_configFile(char* folderPath, char* csvPath) {
+    FILE* file = fopen("config.cfg", "r");
+    if (!file) {
+        ui_displayError("Impossible de charger le fichier de configuration");
+        return;
+    }
+
+    char line[256];
+    while (fgets(line, sizeof(line), file)) {
+        line[strcspn(line, "\n")] = 0;
+
+        char* key = strtok(line, "=");
+        char* value = strtok(NULL, "\n");
+        if (key && value) {
+            if (strcmp(key, "folderPath") == 0) {
+                strcpy(folderPath, value);
+            }
+            else if (strcmp(key, "csvPath") == 0) {
+                strcpy(csvPath, value);
+            }
+        }
+    }
+    fclose(file);
+}
+
+void search_configFile(char* folderPath, char* csvPath) {
+    const char* DEFAULT_FOLDER = "../data/";
+    const char* DEFAULT_CSV = "psittamulgiformes.csv";
+    FILE* file = fopen("config.cfg", "r");
+
+    if (!file) {
+        char input[256];
+
+        printf("Chemin du dossier\n");
+        printf("Appuyez sur Entrée pour utiliser le dossier par défaut [%s]: \n", DEFAULT_FOLDER);
+        if (fgets(input, sizeof(input), stdin)) {
+            input[strcspn(input, "\n")] = 0;
+
+            if (strlen(input) == 0) {
+                strcpy(folderPath, DEFAULT_FOLDER);
+            }
+            else {
+                strcpy(folderPath, input);
+            }
+        }
+
+        printf("Chemin du fichier CSV\n");
+        printf("Appuyez sur Entrée pour utiliser le fichier par défaut [%s]: \n", DEFAULT_CSV);
+
+        if (fgets(input, sizeof(input), stdin)) {
+            input[strcspn(input, "\n")] = 0;
+
+            if (strlen(input) == 0) {
+                char buffer[256];
+                sprintf(buffer, "%s%s", folderPath, DEFAULT_CSV);
+
+                strcpy(csvPath, buffer);
+            }
+            else {
+                char buffer[256];
+                sprintf(buffer, "%s%s", folderPath, input);
+
+                strcpy(csvPath, buffer);
+            }
+        }
+
+
+        create_configFile(folderPath, csvPath);
+        printf("Configuration enregistrée avec succès.\n");
+    }
+    else {
+        fclose(file);
+        load_configFile(folderPath, csvPath);
+    }
+}
