@@ -217,6 +217,9 @@ bool handle_command(Table* table, const char* command, char** args, int argc,
     case CMD_STRUCTURE:
 		cmd_structure(table);
 		break;
+    //case CMD_MODIFY:
+    //    cmd_modify();
+    //    break;
 
     default:
         ui_displayError("Commande non implémentée");

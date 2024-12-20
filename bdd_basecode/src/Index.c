@@ -480,7 +480,8 @@ void Index_removeEntry(Index *self, char *key, EntryPointer entryPtr)
     }
 
     // Equilibre l'arbre à partir du parent du noeud supprimé
-    Index_balance(self, start);
+    if(start != INVALID_POINTER)
+        Index_balance(self, start);
 
 
     return;

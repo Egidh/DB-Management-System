@@ -23,6 +23,7 @@ typedef enum {
     CMD_COUNT,
     CMD_STATS,
     CMD_STRUCTURE,
+    CMD_MODIFY
 } CommandCode;
 
 // Structures pour les commandes
@@ -98,7 +99,7 @@ int commands_getIndex(const Commands* commands, const char* commandName);
 void commands_displayHelp(const Commands* cmd, const char* args, int argc);
 Command* commands_get(const Commands* commands, int index);
 
-// Fonctions de gestion des sélections
+// Fonctions de gestion des sÃ©lections
 Selects* selects_create(const char** names, int count);
 void selects_destroy(Selects* selects);
 void selects_displayMenu(const Selects* selects, int currentSelection);
@@ -111,7 +112,7 @@ char** args_separation(const char* input, int* argc);
 void args_destroy(char** args, int argc);
 void args_display(char** args, int argc);
 
-// Fonctions de commandes spécifiques
+// Fonctions de commandes spÃ©cifiques
 void cmd_hello(void);
 void cmd_exit(void);
 void cmd_insert(Table* table, char** args, int argc, const Commands* commands);
