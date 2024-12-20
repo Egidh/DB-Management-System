@@ -179,10 +179,16 @@ void Table_writeHeader(Table *self)
         fwrite(attribute->name, MAX_NAME_SIZE, 1, tbl);
         fwrite(&attribute->size, sizeof(uint64_t), 1, tbl);
         if (attribute->index)
+        {
             fwrite(&attribute->index->rootPtr, sizeof(uint64_t), 1, tbl);
+            fwrite(&attribute->index->nextFreePtr, sizeof(uint64_t), 1, tbl);
+        }
         else
+        {
             fwrite(&(uint64_t) { -1 }, sizeof(uint64_t), 1, tbl);
-        fwrite(&attribute->index->nextFreePtr, sizeof(uint64_t), 1, tbl);
+            fwrite(&(uint64_t) { -1 }, sizeof(uint64_t), 1, tbl);
+        }
+        
 
     }
 
@@ -342,6 +348,61 @@ void Table_search(Table *self, Filter *filter, SetEntry *resultSet)
         }
     }
     Entry_destroy(testedEntry);
+}
+
+void Table_combinationSearch(Table *self, Filter** filters, Combination comb, int filterCount, SetEntry *resultSet)
+{
+    assert(self && filters);
+
+    if (!resultSet) resultSet = SetEntry_create();
+
+    SetEntry* tempRes = SetEntry_create();
+
+    switch (comb)
+    {
+    case OR:
+        Table_search(self, filters[0], resultSet);
+        Table_search(self, filters[1], resultSet);
+        break;
+
+    case AND:
+        Table_search(self, filters[0], resultSet);
+        Table_search(self, filters[0], tempRes);
+        SetEntryIter* iter = SetEntryIter_create(tempRes);
+        SetEntryNode* node = (SetEntryNode*)calloc(1, sizeof(SetEntryNode));
+        while (SetEntryIter_isValid(iter))
+        {
+            if (!SetEntry_find(resultSet, SetEntryIter_getValue(iter), &node))
+                SetEntry_remove(resultSet, SetEntryIter_getValue(iter));
+            
+            SetEntryIter_next(iter);
+        }
+        free(node);
+        SetEntryIter_destroy(iter);
+        break;
+
+    case WITHOUT:
+        Table_search(self, filters[0], resultSet);
+        Table_search(self, filters[0], tempRes);
+        SetEntryIter* iter = SetEntryIter_create(tempRes);
+        SetEntryNode* node = (SetEntryNode*)calloc(1, sizeof(SetEntryNode));
+        while (SetEntryIter_isValid(iter))
+        {
+            if (SetEntry_find(resultSet, SetEntryIter_getValue(iter), &node))
+                SetEntry_remove(resultSet, SetEntryIter_getValue(iter));
+
+            SetEntryIter_next(iter);
+        }
+        free(node);
+        SetEntryIter_destroy(iter);
+        break;
+
+    default :
+        SetEntry_destroy(resultSet);
+        resultSet = NULL;
+        break;
+    }
+    SetEntry_destroy(tempRes);
 }
 
 void Table_printSearchResult(SetEntry* self, Table* table)
