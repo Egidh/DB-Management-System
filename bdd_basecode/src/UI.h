@@ -18,7 +18,8 @@ typedef enum {
     CMD_SHOW,
     CMD_IBIJAU,
     CMD_SELECT,
-    CMD_COUNT
+    CMD_COUNT,
+    CMD_MODIFY
 } CommandCode;
 
 // Structures pour les commandes
