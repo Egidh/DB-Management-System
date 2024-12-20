@@ -103,7 +103,7 @@ int main(void) {
     Command *print = command_create("print", "Afficher la table", "aucuns arguments", 0, 0);
     commands_add(cmds, print);
     
-    Command *insert = command_create("insert", "Insérer une entrée dans la table", "insert <attribut1> <attribut2> <attribut3> ...", 3, 0);
+    Command *insert = command_create("insert", "Insérer une entrée dans la table", "insert <attribut1> <attribut2> <attribut3> ...", table->attributeCount, 0);
     commands_add(cmds, insert);
     
     Command *search = command_create("search", "Rechercher des entrées dans la table", "search <index attribut> <opérateur> <valeur> [valeur2]", 3, 1);

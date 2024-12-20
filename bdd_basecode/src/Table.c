@@ -485,3 +485,14 @@ void Entry_print(Entry *self)
         printf("%s\t", self->values[i]);
     printf("\n");
 }
+
+void Table_modifyEntry(Table* self, Entry* newEntry, EntryPointer entryPtr)
+{
+    if (!self || !newEntry || entryPtr == INVALID_POINTER)
+    {
+        printf("Entree non valide\n");
+        return;
+    }
+    Table_removeEntry(self, entryPtr);
+    Table_insertEntry(self, newEntry);
+}
