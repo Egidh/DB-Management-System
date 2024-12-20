@@ -1,5 +1,12 @@
 ﻿#include "UI.h"
 
+void printf_utf8(const wchar_t* message) {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD written;
+
+    WriteConsoleW(hConsole, message, wcslen(message), &written, NULL);
+}
+
 void ui_displayWelcome(void) {
     SetConsoleOutputCP(CP_UTF8);
     printf("──────────────────────Welcome To The BBD──────────────────────\n");
@@ -246,7 +253,15 @@ void cmd_insert(Table* table, char** args, int argc, const Commands* commands) {
         return;
     }
 
-    printf("Insertion dans la table...\n");
+    Entry *newEntry = Entry_create(table);
+    for (int i = 0; i < table->attributeCount; i++)
+         strcpy(newEntry->values[i], args[i]);
+    
+    Table_insertEntry(table, newEntry);
+    
+    Entry_destroy(newEntry);
+
+    printf("Entree inseree avec succes\n");
 }
 
 void cmd_search(Table* table, char** args, int argc, const Commands* commands) {
@@ -322,7 +337,7 @@ void cmd_delete(Table* table, char** args, int argc, const Commands* commands) {
     SetEntryIter *resultsIter = SetEntryIter_create(results);
     if (!results->root)
     {
-        printf("Pas d'entrée correspondante : %s", value);
+        printf("Pas d'entree correspondante : %s", value);
     }
     while (SetEntryIter_isValid(resultsIter))
     {
@@ -334,7 +349,7 @@ void cmd_delete(Table* table, char** args, int argc, const Commands* commands) {
     SetEntry_destroy(results);
     SetEntryIter_destroy(resultsIter);
 
-    printf("Suppression de %d éléments réussie\n", entryRemovedCount);
+    printf("Suppression de %d elements reussie\n", entryRemovedCount);
 }
 
 void cmd_print(Table* table) {
