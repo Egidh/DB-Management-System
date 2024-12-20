@@ -117,3 +117,27 @@ void SetEntryIter_next(SetEntryIter *self);
 /// @param self l'itérateur.
 /// @return true si l'itérateur pointe sur un élément valide, false sinon.
 bool SetEntryIter_isValid(SetEntryIter *self);
+
+/// <summary>
+/// Recherche si une entrée est présente dans un SetEntry
+/// </summary>
+/// <param name="self">Le setEntry</param>
+/// <param name="data">L'entree recherchée</param>
+/// <param name="res">Un pointeur sur la node correspondante si trouvée</param>
+/// <returns></returns>
+bool SetEntry_find(SetEntry* self, EntryPointer data, SetEntryNode** res);
+
+
+/// <summary>
+/// Pas le temps
+/// </summary>
+/// <param name="data"></param>
+/// <returns></returns>
+SetEntryNode* SetEntryNode_create(EntryPointer data);
+
+/// <summary>
+/// Pas le temps
+/// </summary>
+/// <param name="data"></param>
+/// <returns></returns>
+void SetEntryNode_destroy(SetEntryNode* node);

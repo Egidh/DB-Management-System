@@ -79,6 +79,12 @@ typedef enum FilterRes
     FILTER_FOUND = 1 << 2
 } FilterRes;
 
+typedef enum Combination
+{
+    AND,
+    OR
+}Combination;
+
 /// @brief Teste un filtre avec la clé contenue dans un noeud.
 /// 
 /// @param self le filtre.
