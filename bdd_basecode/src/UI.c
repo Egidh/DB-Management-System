@@ -1,8 +1,21 @@
 ﻿#include "UI.h"
 
+void printf_utf8(const wchar_t* message) {
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD written;
+
+    WriteConsoleW(hConsole, message, wcslen(message), &written, NULL);
+}
+
+void ui_displayColoredText(const char* text, Color color) {
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	SetConsoleTextAttribute(hConsole, color);
+	printf("%s", text);
+	SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+}
+
 void ui_displayWelcome(void) {
-    SetConsoleOutputCP(CP_UTF8);
-    printf("──────────────────────Welcome To The BBD──────────────────────\n");
+    printf_utf8(L"──────────────────────Welcome To The BBD──────────────────────\n");
     printf("Tapez 'help' pour la liste des commandes.\n\n");
 }
 
@@ -11,66 +24,98 @@ void ui_clearScreen(void) {
 }
 
 void ui_displayError(const char* message) {
-    fprintf(stderr, "Erreur : %s\n", message);
+    char buffer[256];
+    sprintf(buffer, "Erreur : %s\n", message);
+    ui_displayColoredText(buffer, COLOR_RED);
 }
 
 void ui_displaySuccess(const char* message) {
-    printf("Succès : %s\n", message);
+    char buffer[256];
+    sprintf(buffer, "Succès : %s\n", message);
+	ui_displayColoredText(buffer, COLOR_GREEN);
 }
 
 void ui_displayCommandNotFound(void) {
-    printf("Commande non trouvée. Tapez 'help' pour la liste des commandes.\n");
+    char buffer[256];
+    sprintf(buffer, "Commande non trouvée.\n");
+	ui_displayColoredText(buffer, COLOR_BLUE);
 }
 
 void ui_displayArguments(Command* cmd) {
-    printf("La commande requiert %d arguments.\n", cmd->argCount);
+    char buffer[256];
+    sprintf(buffer, "La commande requiert %d arguments.\n", cmd->argCount);
+    ui_displayColoredText(buffer, COLOR_YELLOW);
 }
 
-void ui_displayTable(char* title, char** header, int headerSize, char*** content, int contentSize) {
-    printf("\tTable : %s\n", title);
+void ui_displayTable(char* title, char** header, int headerSize, char*** content, int contentSize) {  
+   printf("Table : %s\n", title);  
 
-    int maxRowSize = max_lenght_of_a_collumn_in_the_table_for_the_display_table_function(header, headerSize);
+   char **rows = calloc(contentSize + 1, sizeof(char*));  
+   if (!rows) {  
+       ui_displayError("Erreur d'allocation de mémoire");  
+       return;  
+   }  
 
-    for (int i = 0; i < headerSize; i++) {
-        printf("+------------");
-    }
+   int *maxRowSize = calloc(headerSize, sizeof(int));  
 
-    printf("+\n");
+   for (int i = 0; i < headerSize; i++) {  
+       rows[0] = header[i];  
+       for (int j = 0; j < contentSize; j++) {  
+           rows[j + 1] = content[j][i];  
+       }  
 
-    for (int i = 0; i < headerSize; i++) {
-		printf("| %-10s ", header[i]);
-	}
+       maxRowSize[i] = max_length_of_a_column_in_the_table_for_the_display_table_function(rows, contentSize);
+   }  
 
-    printf("|\n");
-    
-    for (int i = 0; i < headerSize; i++) {
-		printf("|------------");
-	}
+   for (int i = 0; i < headerSize; i++) {  
+       printf("+");  
+       for (int j = 0; j < maxRowSize[i] + 2; j++) {  
+           printf("-");  
+       }  
+   }  
 
-    printf("|\n");
+   printf("+\n");  
 
-    for (int i = 0; i < contentSize; i++) {
-		for (int j = 0; j < headerSize; j++) {
-            printf("| %-10s ", content[i][j]);
-		}
-		printf("|\n");
-    }
+   for (int i = 0; i < headerSize; i++) {  
+       printf("| %-*s ", maxRowSize[i], header[i]);  
+   }  
 
-    for (int i = 0; i < headerSize; i++) {
-        printf("+------------");
-    }
+   printf("|\n");  
 
-    printf("+\n");
-}
+   for (int i = 0; i < headerSize; i++) {  
+       printf("|");  
+       for (int j = 0; j < maxRowSize[i] + 2; j++) {  
+           printf("-");  
+       }  
+   }  
 
-int max_lenght_of_a_collumn_in_the_table_for_the_display_table_function(char** collumn, int collumnSize) {
-	int max = 0;
-	for (int i = 0; i < collumnSize; i++) {
-		if (strlen(collumn[i]) > max) {
-			max = strlen(collumn[i]);
-		}
-	}
-	return max;
+   printf("|\n");  
+
+   for (int i = 0; i < contentSize; i++) {  
+       for (int j = 0; j < headerSize; j++) {  
+           printf("| %-*s ", maxRowSize[j], content[i][j]);  
+       }  
+       printf("|\n");  
+   }  
+
+   for (int i = 0; i < headerSize; i++) {  
+       printf("+");  
+       for (int j = 0; j < maxRowSize[i] + 2; j++) {  
+           printf("-");  
+       }  
+   }  
+
+   printf("+\n");  
+}  
+
+int max_length_of_a_column_in_the_table_for_the_display_table_function(char** column, int columnSize) {  
+   int max = 0;  
+   for (int i = 0; i < columnSize; i++) {  
+       if (strlen(column[i]) > max) {  
+           max = strlen(column[i]);  
+       }  
+   }  
+   return max;  
 }
 
 char** args_separation(const char* input, int* argc) {
@@ -169,12 +214,14 @@ void selects_destroy(Selects* selects) {
 
 void selects_displayMenu(const Selects* selects, int currentSelection) {
     ui_clearScreen();
-    printf("Utilisez les flèches ↑↓ pour naviguer, Entrée pour sélectionner, Échap pour revenir.\n\n");
-    printf("Sélectionnez une option :\n");
+    printf_utf8(L"Utilisez les flèches ↑↓ pour naviguer, Entrée pour sélectionner, Échap pour revenir.\n\n");
+    printf_utf8(L"Sélectionnez une option :\n");
 
     for (int i = 0; i < selects->selectCount; i++) {
         if (i == currentSelection) {
-            printf("-> %s\n", selects->selects[i].name);
+            char buffer[256];
+            sprintf(buffer, " > %s\n", selects->selects[i].name);
+            ui_displayColoredText(buffer, COLOR_BLACK_BACKGROUND_WHITE);
         }
         else {
             printf("  %s\n", selects->selects[i].name);
@@ -260,9 +307,7 @@ void cmd_search(Table* table, char** args, int argc, const Commands* commands) {
         printf("%s\n", args[i]);
     }
 
-    printf("%d\n", str_to_op(args[1]));
-
-    Filter filter = { atoi(args[0]), str_to_op(args[1]), args[2], 0};
+    Filter filter = { Table_findAttribute(table, args[0]), str_to_op(args[1]), args[2], 0};
 
     if (strcmp(args[1], "OP_BETW") == 0) {
         filter.key2 = args[3];
@@ -317,7 +362,55 @@ void cmd_print_index(Table* table, int indexNum) {
     }
 }
 
-void cmd_show(Table* table) {  
+void cmd_displayIbijau(void) {
+    printf_utf8(L"███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████\n"
+                L"███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████\n"
+                L"███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████\n"
+                L"███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████\n"
+                L"██████████████████████████████████████████████████▓▓▒▓▓▓▓▓▓▒▒▒▒▓▓▓▓▒▒▒▒▒▒▓▓▓███████████████████████████████████████████████████\n"
+                L"█████████████████████████████████████████████▓▓▒▓▒▓▓▓▓▒▒▒▒▒▒▒▒▒▒▓▓▒▓▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓████████████████████████████████████████████\n"
+                L"█████████████████████████████████████████▓▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▒▓▓▓▓▓▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▓▓▓████████████████████████████████████\n"
+                L"██████████████████████████████████████▓▓▓▓▒▒▒▒▓▒▒▓▓▓▒▓▓▓▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▓▓▓▓▓▓▓▓▓▓▓▒▒▒▓▒▓▓▓███████████████████████████████████\n"
+                L"████████████████████████████████████▓▓▓█▓▒▒▒▓▓▓▓▓▓▓▓▓▒▒▓▓▓▒▓▓▒▓▓▒▓█▓▒▒▒▒▒▒▒▒▓▓▓▓▒▓▓▓▓▒▒▓▒▓▓▓▓██████████████████████████████████\n"
+                L"█████████████████████████████████████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒░▒▒▒▓▓▓▒▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓█▓▓▓▓▓▓██████████████████████████████████\n"
+                L"███████████████████████████████████▓▓█▓▓▓▓▓█▓▒▒▒▒▓▒▒▒▒▒▒▒▓▓▒▓▒▓▒▓▒▒▒▒▒▒▓▒▒▒▓▒▒▒▒▒▓▓▓████▓▓▓▓▓▓█████████████████████████████████\n"
+                L"█████████████████████████████████▓▓▓▓▓▒▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▒▒▒▓▓▓▓▓▓▓▓▓▒▒▓▓▒▒▒▒▒▒▓▓▒▓▓▓█▓███████████████████████████████\n"
+                L"████████████████████████████████████▓▓▓▒▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▓▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓███████████████████████████████\n"
+                L"██████████████████████████████████▓▓▓▓▓▓▓▒█████▒▒▒▒▒▒▒▓▓▓▓▓█▓▓▓█▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒████▓▓▓▓▓▓███████████████████████████████\n"
+                L"█████████████████████████████████▓▓▓▓▓▓▓▓▓█████▓▒▒▒▒▒▓▓▓▓▓▓▓▓▓█▓███████████▓▓▓▓▒▒▒▒░▒▓█████▓▓▓▓▓███████████████████████████████\n"
+                L"████████████████████████████████▓██▓▓▓▓▓▓▒▓███▓▒▒▒▒▒▒▓▓▓▓▓██▓▓▓▓█▓██▓███████▓▓▓▒▒▒▒▒▒▓█████▓▓▓▓▓███████████████████████████████\n"
+                L"███████████████████████████████████▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▒▓▓▓██▓▓▓▓▓▓▓▓▓▒▓▓▓▓▓▓▓▓██▓▓▓▒▒▒▒▒▒▓███▓▓▓▓▓████████████████████████████████\n"
+                L"███████████████████████████████████▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▒▓▓█▓█████████████████████████████████\n"
+                L"██████████████████████████████████▓▓▓▓▓▓▒▓▓▓▓▒▒▒▒▓▓▓▓▒▓▓▓▓▓▓▓▓▒▒▒▓▓▓▓▓▒▒▒▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▓▓▓▓▓▓▓███████████████████████████████\n"
+                L"███████████████████████████████▓▓▓▓▓▓▓▓▓▓▒▒▓▓▓▓▓▓▒▒▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▓▓▓▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓█████████████████████████████████\n"
+                L"█████████████████████████████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▓▓▓▓▓▓▓▓██████████████████████████████████\n"
+                L"█████████████████████████████▓▓▓▒▒▒▓▓▓▓▓▓▓▒▒▒▒▓███▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓██████████████████████████████\n"
+                L"████████████████████████████████▓▓▓▓▓▓▒▓▒▓▓▓████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓████▓▓▓▓▓▓▓▓▓▓▓█████████████████████████████\n"
+                L"████████████████████████████████▓▓▓▓██▓▓███████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓█████▓▓▓▓▓▒▒▓▓▓█████████████████████████████\n"
+                L"███████████████████████████████▓▓▓▓██████████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓██████████▓▓▓██████████████████████████████\n"
+                L"███████████████████████████████▓▓▓▓███████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓█▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓████████▓█████████████████████████████████\n"
+                L"██████████████████████████████▓▓▓▓▓▓▓▓▓▓▓▓▓▒▓▓▓▓▓▓▓▓▓▓▒▒▓▓▓▓▓▓▓▒▓▓▓█▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓████▓▓████████████████████████████████\n"
+                L"██████████████████████████████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓████████████████████████████████████\n"
+                L"██████████████████████████████▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▓▓▓▓▓▓▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓███████████████████████████████████\n"
+                L"██████████████████████████████▓▓▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▓▓▓▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓█▓██▓▓▓▓██▓▓████████████████████████████████\n"
+                L"██████████████████████████████▓▒▒▒▒▓▓▓▓▓▓▓▒▓▓▓▓▓▓▓▓▓▓▓▓▓▒▓▓▓▓▒▒▒▒▒▒▓▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓█▓▓▓████████████████████████████████\n"
+                L"██████████████████████████████▓▒▒▒▓▓▓▒▓▓▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▓▓▓▒▒▒▒▒▒▒▒▒▒▓▓▒▓▓▓▓▓▓▓▓▓▓▓▓▓██▓▓▓▓▒▓███████████████████████████████\n"
+                L"█████████████████████████████▓▒▒▒▒▓▓▓▓▓▓▒▓▒▒▒▓▓▓▓▓▓▒▓▓▓▓▓▓▓▓▒▓▓▒▓▒▒▒▒▒▒▓▓▓▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓██▓▓▓▒▓██████████████████████████████\n"
+                L"█████████████████████████████▓▒▒▒▓▓▓▒▒▓▓▓▒▒▒▓▓▓▒▒▒▒▓▓▓▓▒▒▒▒▓▓▓▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▓█████████████████████████████\n"
+                L"████████████████████████████▓▒▒▒▒▓▓▒▒▒▓▓▓▒▓▓▓▓▓▒▒▒▒▒▓▓▓▒▒▒▒▒▒▓▒▒▒▒▒▒▒▒▒▒▒▓▓▓▓▒▒▒▓▓▓▒▓▓▓▓▓▓▓▓▓▓▓▓▒▓█████████████████████████████\n"
+                L"████████████████████████████▓▒▒▒▓▒▒▒▒▓▓▓▓▒▒▓▓▓▓▓▒▒▒▒▓▓▒▒▒▒▒▒▒▒▒▒▓▓▓▒▒▒▒▒▒▒▒▓▓▒▒▒▒▓▓▓▓▓▓▓▓▓▓▒▓▓▓▓▓▓█████████████████████████████\n"
+                L"███████████████████████████▓▒▒▒▒▒▒▒▒▒▓▓▓▒▒▒▓▓▒▒▒▒▒▒▒▓▓▒▒▓▓▓▓▒▒▒▓▓▓▓▓▒▒▒▒▒▒▒▒▒▒▓▒▒▓▓▓▓▓▓▓▒▒▓▓▓▒▒▒▒▓█████████████████████████████\n"
+                L"███████████████████████████▒▒▒▒▒▒▒▒▒▒▒▓▓▒▒▒▓▒▓▒▒▓▒▒▓▓▓▓▓▓▓▓▓▓▒▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▓▓▓▓▒▓▓▓▓▓▓▓▓▒▓▓▓▓▒▒▒▓▓███████████████████████████\n"
+                L"██████████████████████████▒▒▒▒▒▒▒▒▒▒▒▒▓▒▒▒▓▒▒▓▓▓▓▓▒▓▓▓▓▓▓█▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▓▓▓▓▓▓▓▒▓▓▓▓▒▓▓▓▓▓▓▓▓▓███████████████████████████\n"
+                L"██████████████████████████▓▓▒▒▒▒▒▒▒▒▒▒▓▒▒▒▒▒▒▓▒▓▓▒▒▓▓▒▒▓▓▓▓▓▓▒▓▓▓▓▓▓▓▓▓▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒▒▓▓▓██████████████████████████\n"
+                L"█████████████████████████▓▓▓▒▒▒▒▒▒▒▒▒▓▒▒▒▒▒▒▒▒▒▓▓▒▒▒▒▒▒▒▓▓▓▓▒▓▓▓▓▓▓▓▓▒▓▓▓▒▒▒▒▒▒▒▒▓▓▒▓▓▓▓▓▒▓▓▓▓▓▓▒▒▒▓▓██████████████████████████\n"
+                L"██████████████████████████▓▒▒▒▒▒▒▒▓▓▓▓▒▒▒▒▒▒▒▒▒▒▓▒▒▒▒▒▒▒▒▓▓▒▒▓▓▓▓▓▓▓▓▓▓█▓▓▓▓▒▒▒▒▒▓▓▒▒▓▓▒▒▒▒▒▓▓▓▓▓▒▒▓▓██████████████████████████\n"
+                L"█████████████████████████▓▒▒▒▒▒▒▒▒▒▓▓▓▒▒▒▒▒▒▒▒▒▓▓▒▓▒▒▒▒▒▒▓▓▒▒▒▓▓▓▓▓▓▓▓▓█▓▓▒▓▒▒▒▒▒▒▒▓▒▒▓▒▒▒▒▒▓▓▒▒▒▓▓▓▓▓█████████████████████████\n"
+                L"████████████████████████▓▓▒▒▒▒▒▒▒▒▒▒▓▒▒▒▒▒▒▒▒▒▒▓▓▒▒▒▒▒▒▒▓▓▓▒▒▒▒▓▓▓▒▓▓▓▓▓▓▒▓▒▒▒▒▒▒▒▓▓▓▒▒▓▒▒▒▒▒▓▒▒▒▒▒▓▓▓█████████████████████████\n"
+                L"███████████████████████▓▓▒▒▒▒▒▒▒▒▒▒▒▓▒▒▒▒▒▒▒▒▒▒▒▓▒▒▒▒▒▓▒▓▓▓▒▒▒▒▒▒▒▓▒▓▓▓▓▓▒▒▒▓▓▒▒▒▒▓▓▓▓▒▒▒▒▓▓▓▒▒▓▓▒▒▒▓▓█████████████████████████\n");
+}
+
+void cmd_show(Table* table) {
    if (!table) {  
        ui_displayError("Table invalide");  
        return;  
@@ -366,4 +459,111 @@ void cmd_show(Table* table) {
    }  
    free(content);  
    free(header);  
+}
+
+void cmd_selectTable(Table* table, char** args, int argc, const Commands* commands) {
+    if (!table || !args || !commands) {
+        ui_displayError("Arguments invalides pour la sélection de table");
+        return;
+    }
+
+    if (strcmp(args[0], "*") == 0) {
+        printf("Sélection de toutes les tables...\n");
+        cmd_show(table);
+        return;
+    }
+
+    int* indexTab = calloc(argc, sizeof(int));
+    if (!indexTab) {
+        ui_displayError("Erreur d'allocation de mémoire");
+        return;
+    }
+
+    for (int i = 0; i < argc; i++) {
+        indexTab[i] = Table_findAttribute(table, args[i]);
+        if (indexTab[i] == -1) {
+            free(indexTab);
+            ui_displayError("L'attribut n'existe pas");
+            return;
+        }
+    }
+
+    char*** content = calloc(table->entryCount, sizeof(char**));
+    if (!content) {
+        free(indexTab);
+        ui_displayError("Erreur d'allocation de mémoire");
+        return;
+    }
+
+    for (int i = 0; i < table->entryCount; i++) {
+        content[i] = calloc(argc, sizeof(char*));
+        if (!content[i]) {
+            for (int j = 0; j < i; j++) {
+                free(content[j]);
+            }
+            free(content);
+            free(indexTab);
+            ui_displayError("Erreur d'allocation de mémoire");
+            return;
+        }
+    }
+
+    char** header = calloc(argc, sizeof(char*));
+    if (!header) {
+        for (int i = 0; i < table->entryCount; i++) {
+            free(content[i]);
+        }
+        free(content);
+        free(indexTab);
+        ui_displayError("Erreur d'allocation de mémoire");
+        return;
+    }
+
+    Entry* entry = Entry_create(table);
+    if (!entry) {
+        for (int i = 0; i < table->entryCount; i++) {
+            free(content[i]);
+        }
+        free(content);
+        free(header);
+        free(indexTab);
+        ui_displayError("Erreur de création d'entrée");
+        return;
+    }
+
+    for (int i = 0; i < table->entryCount; i++) {
+        EntryPointer entryPtr = i * table->entrySize;
+        Table_readEntry(table, entry, entryPtr);
+
+        for (int k = 0; k < argc; k++) {
+            content[i][k] = strdup(entry->values[indexTab[k]]);
+        }
+    }
+
+    for (int k = 0; k < argc; k++) {
+        header[k] = table->attributes[indexTab[k]].name;
+    }
+
+    ui_displayTable(table->name, header, argc, content, table->entryCount);
+
+    for (int i = 0; i < table->entryCount; i++) {
+        for (int j = 0; j < argc; j++) {
+            free(content[i][j]);
+        }
+        free(content[i]);
+    }
+    free(content);
+    free(header);
+    free(indexTab);
+    Entry_destroy(entry);
+}
+
+ int Table_findAttribute(Table* table, const char* attributeName) {
+	for (int i = 0; i < table->attributeCount; i++) {
+		if (strcmp(table->attributes[i].name, attributeName) == 0) {
+			return i;
+		}
+	}
+
+	return -1;
 }

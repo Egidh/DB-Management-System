@@ -183,7 +183,7 @@ void Index_insertEntry(Index* self, char* key, EntryPointer entryPtr)
     }
 
     // Rééquilibre l'arbre
-    //Index_balance(self, nodePtr);
+    Index_balance(self, nodePtr);
 }
 
 int64_t Index_getNodeHeight(Index *self, NodePointer nodePtr)

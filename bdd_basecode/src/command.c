@@ -27,18 +27,28 @@ void commands_displayHelp(const Commands* cmd) {
     for (int i = 0; i < cmd->commandCount; i++) {
         printf("%s: %s\n", cmd->commands[i].name, cmd->commands[i].description);
 
-        if (cmd->commands[i].argCount > 0) 
-            printf("   - Arguments requis : %d\n", cmd->commands[i].argCount);
-        if (cmd->commands[i].optionAgrCount > 0) 
-            printf("   - Arguments optionnels : %d\n", cmd->commands[i].optionAgrCount);
+        if (cmd->commands[i].argCount > 0) {
+            char buffer[256];
+            sprintf(buffer, "   - Arguments requis : %d\n", cmd->commands[i].argCount);
+            ui_displayColoredText(buffer, COLOR_YELLOW);
+        }
+        if (cmd->commands[i].optionAgrCount > 0) {
+            char buffer[256];
+			sprintf(buffer, "   - Arguments optionnels : %d\n", cmd->commands[i].optionAgrCount);
+			ui_displayColoredText(buffer, COLOR_YELLOW);
+        }
         
-        if (cmd->commands[i].argCount == 0 && cmd->commands[i].optionAgrCount == 0)
-            printf("   - Aucuns arguments necessaires.\n");
+        if (cmd->commands[i].argCount == 0 && cmd->commands[i].optionAgrCount == 0) {
+            char buffer[256];
+            sprintf(buffer, "   - Aucun argument requis.\n");
+            ui_displayColoredText(buffer, COLOR_PURPLE);
+        }
 
         if (cmd->commands[i].optionAgrCount > 0 || cmd->commands[i].argCount > 0) {
-            printf("   - Utilisation : %s\n", cmd->commands[i].argList);
-
-        }
+            char buffer[256];
+            sprintf(buffer, "   - Liste des arguments : %s\n", cmd->commands[i].argList);
+			ui_displayColoredText(buffer, COLOR_GREEN);
+		}
 
         printf("\n");
     }
@@ -71,7 +81,7 @@ bool handle_command(Table* table, const char* command, char** args, int argc,
         return true;
     }
 
-    if (argc > cmd->argCount) {
+    if (argc > (cmd->argCount + cmd->optionAgrCount)) {
         ui_displayError("Trop d'arguments");
         ui_displayArguments(cmd);
         return true;
@@ -114,6 +124,14 @@ bool handle_command(Table* table, const char* command, char** args, int argc,
     case CMD_SHOW:
 		cmd_show(table);
 		break;
+
+    case CMD_IBIJAU:
+		cmd_displayIbijau();
+		break;
+
+    case CMD_SELECT:
+        cmd_selectTable(table, args, argc, commands);
+        break;
 
     default:
         ui_displayError("Commande non implémentée");
