@@ -110,7 +110,6 @@ Index *Index_create(Table *table, int attributeIndex, char *folderPath)
         Table_readEntry(table, newEntry, entryPointer);
         if(newEntry->nextFreePtr != VALID_ENTRY)
         {
-            printf("skipped\n");
             length++;
             continue;
         }
@@ -546,4 +545,26 @@ NodePointer Index_searchEntryRec(Index *self, char *key, EntryPointer entryPtr, 
 NodePointer Index_searchEntry(Index *self, char *key, EntryPointer entryPtr)
 {
     return Index_searchEntryRec(self, key, entryPtr, self->rootPtr);
+}
+
+void Index_sort(Index *self, NodePointer nodePtr, bool mode)
+{
+	if (nodePtr == INVALID_POINTER) return;
+	
+	IndexNode node;
+	Index_readNode(self, &node, nodePtr);
+
+    if (mode == 1) {
+	    Index_sort(self, node.leftPtr, 1);
+	    //printf("%s\n", node.key);
+        Entry * entry = Entry_create(self->table);
+        Table_readEntry(self->table, entry, node.entryPtr);
+        Entry_print(entry);
+	    Index_sort(self, node.rightPtr, 1);
+    }
+    else {
+		Index_sort(self, node.rightPtr, 0);
+	    printf("%s\n", node.key);
+	    Index_sort(self, node.leftPtr, 0);
+    }
 }

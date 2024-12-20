@@ -21,11 +21,65 @@ int commands_getIndex(const Commands* commands, const char* commandName) {
     return -1;
 }
 
-void commands_displayHelp(const Commands* cmd) {
+void commands_displayHelp(const Commands* cmd, const char** args, int argc) {
     printf("Commandes disponibles :\n\n");
+
+    if (argc) {
+        if (strcmp(args[0], "-s") == 0) {
+            for (int i = 0; i < cmd->commandCount; i++) {
+			    printf("%s: %s\n", cmd->commands[i].name, cmd->commands[i].description);
+		    }
+            return;
+        }
+
+        int cmdIndex = commands_getIndex(cmd, args[0]);
+
+        printf("%s: %s\n", cmd->commands[cmdIndex].name, cmd->commands[cmdIndex].description);
+
+        if (cmd->commands[cmdIndex].example != NULL) {
+			char buffer[256];
+			sprintf(buffer, "   - Exemple : %s\n", cmd->commands[cmdIndex].example);
+			ui_displayColoredText(buffer, COLOR_BLUE);
+		}
+
+        if (cmd->commands[cmdIndex].argCount > 0) {
+            char buffer[256];
+            sprintf(buffer, "   - Arguments requis : %d\n", cmd->commands[cmdIndex].argCount);
+            ui_displayColoredText(buffer, COLOR_YELLOW);
+        }
+
+        if (cmd->commands[cmdIndex].optionAgrCount > 0) {
+            char buffer[256];
+            sprintf(buffer, "   - Arguments optionnels : %d\n", cmd->commands[cmdIndex].optionAgrCount);
+            ui_displayColoredText(buffer, COLOR_YELLOW);
+        }
+
+        if (cmd->commands[cmdIndex].argCount == 0 && cmd->commands[cmdIndex].optionAgrCount == 0) {
+            char buffer[256];
+            sprintf(buffer, "   - Aucun argument requis.\n");
+            ui_displayColoredText(buffer, COLOR_PURPLE);
+        }
+
+        if (cmd->commands[cmdIndex].optionAgrCount > 0 || cmd->commands[cmdIndex].argCount > 0) {
+            char buffer[256];
+            sprintf(buffer, "   - Liste des arguments : %s\n", cmd->commands[cmdIndex].argList);
+            ui_displayColoredText(buffer, COLOR_GREEN);
+        }
+
+		return;
+    }
+
+
+
 
     for (int i = 0; i < cmd->commandCount; i++) {
         printf("%s: %s\n", cmd->commands[i].name, cmd->commands[i].description);
+
+        if (cmd->commands[i].example != NULL) {
+            char buffer[256];
+            sprintf(buffer, "   - Exemple : %s\n", cmd->commands[i].example);
+            ui_displayColoredText(buffer, COLOR_BLUE);
+        }
 
         if (cmd->commands[i].argCount > 0) {
             char buffer[256];
@@ -69,6 +123,7 @@ bool handle_command(Table* table, const char* command, char** args, int argc,
         return true;
     }
 
+
     Command* cmd = commands_get(commands, cmdIndex);
     if (!cmd) {
         ui_displayError("Commande invalide");
@@ -78,14 +133,24 @@ bool handle_command(Table* table, const char* command, char** args, int argc,
     if (argc < cmd->argCount) {
         ui_displayError("Nombre d'arguments insuffisant");
         ui_displayArguments(cmd);
+        ui_displayExample(cmd);
         return true;
     }
 
     if (argc > (cmd->argCount + cmd->optionAgrCount)) {
         ui_displayError("Trop d'arguments");
         ui_displayArguments(cmd);
+        ui_displayExample(cmd);
         return true;
     }
+
+    if (cmd->argCount == 0 && cmd->optionAgrCount == 0) {
+		if (argc > 0) {
+			ui_displayError("Cette commande ne prend pas d'arguments");
+            ui_displayExample(cmd);
+			return true;
+		}
+	}
 
     switch (cmdIndex) {
     case CMD_HELLO:
@@ -93,7 +158,7 @@ bool handle_command(Table* table, const char* command, char** args, int argc,
         break;
 
     case CMD_HELP:
-        commands_displayHelp(commands);
+        commands_displayHelp(commands, args, argc);
         break;
 
     case CMD_EXIT:
@@ -133,6 +198,25 @@ bool handle_command(Table* table, const char* command, char** args, int argc,
         cmd_selectTable(table, args, argc, commands);
         break;
 
+    case CMD_SORT:
+        cmd_sort(table, args, argc, commands);
+		break;
+    
+    case CMD_EXPORT:
+		cmd_export(table, args, argc, commands);
+		break;
+
+    case CMD_COUNT:
+        cmd_count(table, args, argc, commands);
+        break;
+
+    case CMD_STATS:
+		cmd_stats(table, args, argc, commands);
+		break;
+
+    case CMD_STRUCTURE:
+		cmd_structure(table);
+		break;
     //case CMD_MODIFY:
     //    cmd_modify();
     //    break;
@@ -145,7 +229,7 @@ bool handle_command(Table* table, const char* command, char** args, int argc,
     return true;
 }
 
-Command* command_create(const char* name, const char* description, const char* argList, int argCount, int optionArgCount) {
+Command* command_create(const char* name, const char* description, const char* argList, const char* exemple, int argCount, int optionArgCount) {
     Command* cmd = calloc(1, sizeof(Command));
     if (!cmd) {
         return NULL;
@@ -153,6 +237,7 @@ Command* command_create(const char* name, const char* description, const char* a
 
     cmd->name = name;
     cmd->description = description;
+    cmd->example = exemple;
     cmd->argList = argList;
     cmd->argCount = argCount;
     cmd->optionAgrCount = optionArgCount;

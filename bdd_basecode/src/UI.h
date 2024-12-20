@@ -18,7 +18,11 @@ typedef enum {
     CMD_SHOW,
     CMD_IBIJAU,
     CMD_SELECT,
+    CMD_SORT,
+    CMD_EXPORT,
     CMD_COUNT,
+    CMD_STATS,
+    CMD_STRUCTURE,
     CMD_MODIFY
 } CommandCode;
 
@@ -27,6 +31,7 @@ typedef struct {
     char* name;
     char* description;
     char* argList;
+    char* example;
     int argCount;
     int optionAgrCount;
 } Command;
@@ -83,17 +88,18 @@ void ui_displayError(const char* message);
 void ui_displaySuccess(const char* message);
 void ui_displayCommandNotFound(void);
 void ui_displayArguments(Command* cmd);
+void ui_displayExample(Command* cmd);
 
 // Fonctions de gestion des commandes
 Commands* commands_create_list(void);
 bool commands_add(Commands* commands, Command* cmd);
-Command* command_create(const char* name, const char* description, const char* argList, int argCount, int optionArgCount);
+Command* command_create(const char* name, const char* description, const char* argList, const char* exemple, int argCount, int optionArgCount);
 void commands_destroy(Commands* commands);
 int commands_getIndex(const Commands* commands, const char* commandName);
-void commands_displayHelp(const Commands* commands);
+void commands_displayHelp(const Commands* cmd, const char* args, int argc);
 Command* commands_get(const Commands* commands, int index);
 
-// Fonctions de gestion des sélections
+// Fonctions de gestion des sÃ©lections
 Selects* selects_create(const char** names, int count);
 void selects_destroy(Selects* selects);
 void selects_displayMenu(const Selects* selects, int currentSelection);
@@ -106,7 +112,7 @@ char** args_separation(const char* input, int* argc);
 void args_destroy(char** args, int argc);
 void args_display(char** args, int argc);
 
-// Fonctions de commandes spécifiques
+// Fonctions de commandes spÃ©cifiques
 void cmd_hello(void);
 void cmd_exit(void);
 void cmd_insert(Table* table, char** args, int argc, const Commands* commands);
@@ -117,9 +123,14 @@ void cmd_print_index(Table* table, int indexNum);
 void cmd_show(Table* table);
 void cmd_selectTable(Table* table, char** args, int argc, const Commands* commands);
 void cmd_displayIbijau(void);
+void cmd_sort(Table* table, char** args, int argc, const Commands* commands);
+void cmd_export(Table* table, char** args, int argc, const Commands* commands);
+void cmd_count(Table* table, char** args, int argc, const Commands* commands);
+void cmd_stats(Table* table, char** args, int argc, const Commands* commands);
+void cmd_structure(Table* table);
 
 // Fonction principale de traitement des commandes
 bool handle_command(Table* table, const char* command, char** args, int argc, const Commands* commands, Mode* mode);
 RequestOp str_to_op(const char* op);
 
-bool get_input();
+void search_configFile(char* folderPath, char* csvPath);
