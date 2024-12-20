@@ -404,13 +404,13 @@ void Index_debugPrintRec(Index *self, NodePointer nodePtr, int depth, int isLeft
 
     Index_debugPrintRec(self, node.rightPtr, depth + 1, false);
 
-    for (int i = 0; i < depth - 1; i++) printf("\t");
+    for (int i = 0; i < depth - 1; i++) printf("          ");
     if (depth > 0)
     {
         if (isLeft) printf("  \\-");
         else printf("  /-");
     }
-    printf("[%s] : %ld\n", (node.key), node.height);
+    printf("|%s : %ld|\n", (node.key), node.height);
 
     Index_debugPrintRec(self, node.leftPtr, depth + 1, true);
 }

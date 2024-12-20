@@ -138,176 +138,131 @@ int main(int argc, char** argv)
 #endif
 
 #if 1
-int main() {
-    Table* table = Table_createFromCSV("../data/intro_1/psittamulgiformes.csv", "../data/intro_1");
-
+int main(void) {
     SetConsoleOutputCP(CP_UTF8);
-    char input[MAX_INPUT_SIZE];
-
-    SetConsoleTitle("BBD");
-
-    COORD consoleSize = { 0 };
-    consoleSize = GetLargestConsoleWindowSize(GetStdHandle(STD_OUTPUT_HANDLE));
-    SMALL_RECT windowSize = { 0, 0, consoleSize.X - 1, consoleSize.Y - 1 };
-    DWORD nFont = 0;
-    SetConsoleWindowInfo(GetStdHandle(STD_OUTPUT_HANDLE), TRUE, &windowSize);
-    GetConsoleFontSize(GetStdHandle(STD_OUTPUT_HANDLE), nFont);
-
-    printf("╭──────────────────────Welcome To The BBD──────────────────────╮\n");
-    printf("Type 'help' for a list of commands.\n");
-
-    Argument *insert_arg = calloc(table->attributeCount, sizeof(Argument));
-    if (!insert_arg) {
-		printf("Memory allocation failed.\n");
-		return 1;
-	}
-
-    for (int i = 0; i < table->attributeCount; i++) {
-		insert_arg[i].name = table->attributes[i].name;
-		insert_arg[i].value = calloc(1, MAX_INPUT_SIZE);
-		if (!insert_arg[i].value) {
-			printf("Memory allocation failed.\n");
-			return 1;
-		}
-	}
-
-    Command commands[] = {
-        {"hello", "Say hello!"},
-        {"help", "Displays a list of commands"},
-        {"exit", "Exits the program"},
-        {"print", "Print a file"},
-		{"create", "Create a table from a CSV file"},
-		{"load", "Load a table from a file"},
-        {"insert", "Insert an entry into the table", insert_arg, table->attributeCount},
-		{"search", "Search for entries in the table"},
-		{"delete", "Delete an entry from the table"},
-		{"update", "Update an entry in the table"},
-		{"print", "Print the table"},
-		{"createIndex", "Create an index on an attribute"},
-		{"deleteIndex", "Delete an index on an attribute"},
-		{"printIndex", "Print an index"},
-		{"select", "Select a mode to display data"},
-		{"debug", "Debug print the table"},
-        {"clear", "Clear the console"},
-    };
-    int commandCount = sizeof(commands) / sizeof(Command);
-
-    Commands* commandsStruct = calloc(1, sizeof(Commands));
-    if (!commandsStruct) {
-        printf("Memory allocation failed.\n");
+    SetConsoleTitle("BBD - Base de Données");
+    
+    Table* table = Table_createFromCSV("../data/intro_1/psittamulgiformes.csv", "../data/intro_1");
+    if (!table) {
+        ui_displayError("Impossible de créer la table depuis le fichier CSV");
         return 1;
     }
-    commandsStruct->commands = commands;
-    commandsStruct->commandCount = commandCount;
 
-    char *names[] = { "Table", "Data", "Index 0", "Index 1", "Index 2" };
-    int count = sizeof(names) / sizeof(char*);
-    Selects* selects = create_selects(names, count);
+    Commands* cmds = commands_create_list();
+    if (!cmds) {
+        ui_displayError("Impossible de créer les commandes");
+        Table_destroy(table);
+        return 1;
+    }
 
-    int countSelects = selects->selectCount;
-    Selector* selector = create_selector(selects, countSelects);
+    Command* hello = command_create("hello", "Dire bonjour !", "aucuns arguments", 0, 0);
+    commands_add(cmds, hello);
+    
+    Command *help = command_create("help", "Affiche la liste des commandes", "aucuns arguments", 0, 0);
+    commands_add(cmds, help);
+    
+    Command *exit = command_create("exit", "Quitter le programme", "aucuns arguments", 0, 0);
+    commands_add(cmds, exit);
+    
+    Command *print = command_create("print", "Afficher la table", "aucuns arguments", 0, 0);
+    commands_add(cmds, print);
+    
+    Command *insert = command_create("insert", "Insérer une entrée dans la table", "insert <attribut1> <attribut2> <attribut3> ...", 3, 0);
+    commands_add(cmds, insert);
+    
+    Command *search = command_create("search", "Rechercher des entrées dans la table", "search <attribut> <opérateur> <valeur> [valeur2]", 3, 1);
+    commands_add(cmds, search);
+    
+    Command *delete = command_create("delete", "Supprimer une entrée de la table", "delete <index>", 1, 0);
+    commands_add(cmds, delete);
+    
+    Command *clear = command_create("clear", "Effacer l'écran", "aucuns arguments", 0, 0);
+    commands_add(cmds, clear);
 
+    Command *show = command_create("show", "Affiche les tables", "aucuns arguments", 0, 0);
+    commands_add(cmds, show);
+
+    const char* selectNames[] = {
+        "Table",
+        "Data",
+        "Index 0",
+        "Index 1",
+        "Index 2"
+    };
+    Selects* selects = selects_create(selectNames, sizeof(selectNames) / sizeof(char*));
+    if (!selects) {
+        ui_displayError("Impossible de créer les sélections");
+        commands_destroy(cmds);
+        Table_destroy(table);
+        return 1;
+    }
+
+    Selector* selector = selector_create(selects);
+    if (!selector) {
+        ui_displayError("Impossible de créer le sélecteur");
+        selects_destroy(selects);
+        commands_destroy(cmds);
+        Table_destroy(table);
+        return 1;
+    }
+
+    char input[MAX_INPUT_SIZE];
     Mode mode = MODE_WRITE;
+    bool running = true;
 
-    while (1) {
+    ui_displayWelcome();
+
+    while (running) {
         if (mode == MODE_WRITE) {
             printf("> ");
-            if (fgets(input, MAX_INPUT_SIZE, stdin) == NULL) {
+
+            if (!fgets(input, MAX_INPUT_SIZE, stdin)) {
                 break;
             }
             input[strcspn(input, "\n")] = 0;
 
-
-            char** argv = calloc(INITIAL_SIZE, sizeof(char*));
-            if (argv == NULL) {
-                fprintf(stderr, "Memory allocation failed\n");
-                return 1;
-            }
-
             int argc = 0;
-            int capacity = INITIAL_SIZE;
-
-            char* strToken = strtok(input, " ");
-            char * command = strToken;
-            strToken = strtok(NULL, " ");
-            while (strToken != NULL) {
-                if (argc >= capacity) {
-                    capacity *= 2;
-                    argv = realloc(argv, capacity * sizeof(char*));
-                    if (argv == NULL) {
-                        fprintf(stderr, "Memory reallocation failed\n");
-                        return 1;
-                    }
-                }
-
-                argv[argc++] = strToken;
-                strToken = strtok(NULL, " ");
+            char** argv = args_separation(input, &argc);
+            if (!argv || argc == 0) {
+                continue;
             }
 
-            for (int i = 0; i < argc; i++) {
-                printf("Argument %d: %s\n", i, argv[i]);
+            char* command = argv[0];
+            char** cmdArgs = argv[1];
+            argc--;
+
+            if (!handle_command(table, command, cmdArgs, argc, cmds, &mode)) {
+                running = false;
             }
 
-            if (strcmp(command, "help") == 0) {
-                help(commandsStruct);
-            }
-            else if (strcmp(command, "hello") == 0) {
-                hello();
-            }
-            else if (strcmp(command, "exit") == 0) {
-                exit_program();
-            }
-            else if (strcmp(command, "print") == 0) {
-                mode = MODE_SELECT;
-            }
-            else if (strcmp(command, "insert") == 0) {
-
-                insert_into_table(command, argv, argc, commandsStruct);
-            }
-            else {
-                printf("Command not found. Type 'help' for a list of commands.\n");
-            }
-
-            free(argv);
+            args_destroy(argv, argc + 1);
         }
         else if (mode == MODE_SELECT) {
-            int currentSelection = selectMode(selector, &mode);
-            system("cls");
-            printf("╭──────────────────────Welcome To The BBD──────────────────────╮\n");
-            printf("Type 'help' for a list of commands.\n");
-            if (currentSelection != -1) {
-                printf("Current mode: %s\n", selects->selects[currentSelection].name);
-            }
+            int selection = selector_handleInput(selector, &mode);
+            if (selection >= 0) {
+                ui_clearScreen();
+                ui_displayWelcome();
+                printf("Mode actuel : %s\n", selects->selects[selection].name);
 
-            if (currentSelection == 0) {
-				Table_debugPrint(table);
-			}
-			else if (currentSelection == 1) {
-			}
-			else if (currentSelection == 2) {
-                Index *index = table->attributes[0].index;
-                if (index)
-				    Index_debugPrint(index, 0, index->rootPtr);
-			}
-			else if (currentSelection == 3) {
-				Index *index = table->attributes[1].index;
-				if (index)
-				    Index_debugPrint(index, 0, index->rootPtr);
-			}
-			else if (currentSelection == 4) {
-                Index *index = table->attributes[2].index;
-                if (index)
-				    Index_debugPrint(index, 0, index->rootPtr);
+                switch (selection) {
+                case 0:
+                    cmd_print(table);
+                    break;
+                case 2:
+                case 3:
+                case 4:
+                    cmd_print_index(table, selection - 2);
+                    break;
+                }
             }
-
             mode = MODE_WRITE;
         }
     }
 
-    free(commandsStruct);
-    free(selects->selects);
-    free(selects);
-    free(selector);
+    selector_destroy(selector);
+    selects_destroy(selects);
+    commands_destroy(cmds);
+    Table_destroy(table);
 
     return 0;
 }
