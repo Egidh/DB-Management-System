@@ -311,6 +311,14 @@ void cmd_insert(Table* table, char** args, int argc, const Commands* commands) {
         return;
     }
 
+    for (int i = 0; i < argc; i++) {
+        size_t argLength = strlen(args[i]);
+		if (argLength > table->attributes[i].size) {
+			printf("Erreur : %s trop long, sa taille maximale est de %d\n", args[i], table->attributes[i].size);
+			return;
+		}
+	}
+
     Entry *newEntry = Entry_create(table);
     for (int i = 0; i < table->attributeCount; i++)
          strcpy(newEntry->values[i], args[i]);
@@ -331,13 +339,17 @@ void cmd_search(Table* table, char** args, int argc, const Commands* commands) {
     Filter filter = { Table_findAttribute(table, args[0]), str_to_op(args[1]), args[2], 0};
     if (filter.attributeIndex == -1)
     {
-        printf("\nErreur: %s Attribut invalide\n", args[0]);
+        char buffer[256];
+        sprintf(buffer, "Attribut invalide : %s.\n", args[0]);
+        ui_displayError(buffer);
         return;
     }
 
     if(filter.requestOp == -1)
     {
-        printf("\nErreur : %s operation non reconnue\n", args[1]);
+        char buffer[256];
+        sprintf(buffer, "Operation invalide : %s.\n", args[1]);
+		ui_displayError(buffer);
         return;
     }
 
@@ -346,7 +358,8 @@ void cmd_search(Table* table, char** args, int argc, const Commands* commands) {
             filter.key2 = args[3];
         else
         {
-            printf("\nArgument manquant pour <> !\nsearch Attribut <> key_1 key_2\n");
+            ui_displayError("\nArgument manquant pour <> !");
+            ui_displayArguments(commands_get(commands, commands_getIndex(commands, "search")));
             return;
         }
     }
@@ -357,7 +370,32 @@ void cmd_search(Table* table, char** args, int argc, const Commands* commands) {
     Table_search(table, &filter, result);
 
     printf("%d entree trouvees :\n\n", SetEntry_size(result));
-    Table_printSearchResult(result, table);
+
+    char **header = calloc(table->attributeCount, sizeof(char*));
+    for (int i = 0; i < table->attributeCount; i++)
+	{
+		header[i] = table->attributes[i].name;
+	}
+
+    char ***entries = calloc(SetEntry_size(result), sizeof(char**));
+    SetEntryIter *iter = SetEntryIter_create(result);
+
+	for (int i = 0; i < SetEntry_size(result); i++)
+	{
+		entries[i] = calloc(table->attributeCount, sizeof(char*));
+		Entry *entry = Entry_create(table);
+		Table_readEntry(table, entry, SetEntryIter_getValue(iter));
+		for (int j = 0; j < table->attributeCount; j++)
+		{
+			entries[i][j] = entry->values[j];
+		}
+		SetEntryIter_next(iter);
+	}
+
+    ui_displayTable("Resultat de la recherche", header, table->attributeCount, entries, SetEntry_size(result));
+
+    SetEntry_destroy(result);
+    SetEntryIter_destroy(iter);
 }
 
 RequestOp str_to_op(const char* op) {
@@ -396,7 +434,9 @@ void cmd_delete(Table* table, char** args, int argc, const Commands* commands) {
 
     if (idx == -1)
     {
-        printf("Attribut invalide : %s.\n", attribute);
+        char buffer[256];
+        sprintf(buffer, "Attribut invalide : %s.\n", attribute);
+        ui_displayError(buffer);
         return;
     }
 
@@ -406,10 +446,15 @@ void cmd_delete(Table* table, char** args, int argc, const Commands* commands) {
 
     int entryRemovedCount = 0;
     SetEntryIter *resultsIter = SetEntryIter_create(results);
+    
     if (!results->root)
     {
-        printf("Pas d'entree correspondante : %s", value);
+        char buffer[256];
+        sprintf(buffer, "Pas d'entree correspondante : %s", value);
+		ui_displayError(buffer);
+        return;
     }
+
     while (SetEntryIter_isValid(resultsIter))
     {
         Table_removeEntry(table, resultsIter->curr->data);
@@ -420,7 +465,9 @@ void cmd_delete(Table* table, char** args, int argc, const Commands* commands) {
     SetEntry_destroy(results);
     SetEntryIter_destroy(resultsIter);
 
-    printf("Suppression de %d elements reussie\n", entryRemovedCount);
+    char buffer[256];
+    sprintf(buffer, "%d entree(s) supprimee(s) avec succes.\n", entryRemovedCount);
+	ui_displaySuccess(buffer);
 }
 
 void cmd_print(Table* table) {
@@ -672,6 +719,22 @@ void cmd_sort(Table* table, char** args, int argc, const Commands* commands) {
 		return;
 	}
 
+    for (int i = 0; i < table->attributeCount; i++) {
+        printf("+-----------------");
+    }
+    printf("+\n");
+
+    for (int i = 0; i < table->attributeCount; i++) {
+		printf("| %-15s ", table->attributes[i].name);
+	}
+
+	printf("|\n");
+
+    for (int i = 0; i < table->attributeCount; i++) {
+        printf("+-----------------");
+    }
+    printf("+\n");
+
     if (strcmp(args[1], "asc") == 0) {
 		Index_sort(index, index->rootPtr, 1);
 	} else if (strcmp(args[1], "desc") == 0) {
@@ -683,6 +746,11 @@ void cmd_sort(Table* table, char** args, int argc, const Commands* commands) {
         free(buffer);
 		return;
 	}
+
+	for (int i = 0; i < table->attributeCount; i++) {
+		printf("+-----------------");
+	}
+	printf("+\n");
 
 	printf("Tri de l'index de l'attribut %s effectué\n", args[0]);
 }

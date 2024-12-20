@@ -542,14 +542,16 @@ void Entry_destroy(Entry *self)
     free(self);
 }
 
-void Entry_print(Entry *self)
-{
-    if (!self && self->nextFreePtr == VALID_ENTRY)
+void Entry_print(Entry* self) {
+    if (!self || self->nextFreePtr != VALID_ENTRY)
         return;
-    for (int i = 0; i < self->attributeCount; i++)
-        printf("%s\t", self->values[i]);
-    printf("\n");
+
+    for (int i = 0; i < self->attributeCount; i++) {
+        printf("| %-15s ", self->values[i]);
+    }
+    printf("|\n");
 }
+
 
 void Table_modifyEntry(Table* self, Entry* newEntry, EntryPointer entryPtr)
 {
