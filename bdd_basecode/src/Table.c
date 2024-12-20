@@ -355,9 +355,9 @@ void Table_search(Table *self, Filter *filter, SetEntry *resultSet)
     Entry_destroy(testedEntry);
 }
 
-void Table_combinationSearch(Table *self, Filter** filters, Combination comb, int filterCount, SetEntry *resultSet)
+void Table_combinationSearch(Table *self, Filter* filterA, Filter* filterB, Combination comb, SetEntry *resultSet)
 {
-    assert(self && filters);
+    assert(self && filterA && filterB);
 
     if (!resultSet) resultSet = SetEntry_create();
 
@@ -368,13 +368,13 @@ void Table_combinationSearch(Table *self, Filter** filters, Combination comb, in
     switch (comb)
     {
     case OR:
-        Table_search(self, filters[0], resultSet);
-        Table_search(self, filters[1], resultSet);
+        Table_search(self, filterA, resultSet);
+        Table_search(self, filterB, resultSet);
         break;
 
     case AND:
-        Table_search(self, filters[0], resultSet);
-        Table_search(self, filters[0], tempRes);
+        Table_search(self, filterA, resultSet);
+        Table_search(self, filterB, tempRes);
         iter = SetEntryIter_create(tempRes);
         while (SetEntryIter_isValid(iter))
         {
@@ -383,11 +383,13 @@ void Table_combinationSearch(Table *self, Filter** filters, Combination comb, in
             
             SetEntryIter_next(iter);
         }
+        SetEntryIter_destroy(iter);
+
         break;
 
     case WITHOUT:
-        Table_search(self, filters[0], resultSet);
-        Table_search(self, filters[0], tempRes);
+        Table_search(self, filterA, resultSet);
+        Table_search(self, filterB, tempRes);
 
         iter = SetEntryIter_create(tempRes);
         while (SetEntryIter_isValid(iter))
@@ -397,6 +399,8 @@ void Table_combinationSearch(Table *self, Filter** filters, Combination comb, in
 
             SetEntryIter_next(iter);
         }
+        SetEntryIter_destroy(iter);
+
         break;
 
     default :
@@ -405,7 +409,6 @@ void Table_combinationSearch(Table *self, Filter** filters, Combination comb, in
         break;
     }
     free(node);
-    SetEntryIter_destroy(iter);
     SetEntry_destroy(tempRes);
 }
 
