@@ -6,13 +6,15 @@
 
 #include "Settings.h"
 #include "Table.h"
+#include "Index.h"
+#include "UI.h"
 
 
 //load from file
-#if 1
+#if 0
 int main(int argc, char** argv)
 {
-    Table* table = Table_load("psittamulgiformes.tbl", "../data/intro");
+    Table* table = Table_load("psittamulgiformes.tbl", "../data/intro_1");
 
     //Entry* cherry = Entry_create(table);
     //strcpy(cherry->values[0], "Cherry");
@@ -41,7 +43,7 @@ int main(int argc, char** argv)
 int main(int argc, char** argv)
 {
     //Table* table = Table_load("psittamulgiformes.tbl", "../data/intro/");
-    Table* table = Table_createFromCSV("../data/intro/psittamulgiformes.csv", "../data/intro");
+    Table* table = Table_createFromCSV("../data/intro_1/psittamulgiformes.csv", "../data/intro_1");
 
     /*Entry* cherry = Entry_create(table);
     strcpy(cherry->values[0], "Cherry");
@@ -132,5 +134,136 @@ int main(int argc, char** argv)
     Table_destroy(table); table = NULL;
 
     return EXIT_SUCCESS;
+}
+#endif
+
+#if 1
+int main(void) {
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleTitle("BBD - Base de Données");
+    
+    Table* table = Table_createFromCSV("../data/intro_1/psittamulgiformes.csv", "../data/intro_1");
+    if (!table) {
+        ui_displayError("Impossible de créer la table depuis le fichier CSV");
+        return 1;
+    }
+
+    Commands* cmds = commands_create_list();
+    if (!cmds) {
+        ui_displayError("Impossible de créer les commandes");
+        Table_destroy(table);
+        return 1;
+    }
+
+    Command* hello = command_create("hello", "Dire bonjour !", "aucuns arguments", 0, 0);
+    commands_add(cmds, hello);
+    
+    Command *help = command_create("help", "Affiche la liste des commandes", "aucuns arguments", 0, 0);
+    commands_add(cmds, help);
+    
+    Command *exit = command_create("exit", "Quitter le programme", "aucuns arguments", 0, 0);
+    commands_add(cmds, exit);
+    
+    Command *print = command_create("print", "Afficher la table", "aucuns arguments", 0, 0);
+    commands_add(cmds, print);
+    
+    Command *insert = command_create("insert", "Insérer une entrée dans la table", "insert <attribut1> <attribut2> <attribut3> ...", 3, 0);
+    commands_add(cmds, insert);
+    
+    Command *search = command_create("search", "Rechercher des entrées dans la table", "search <attribut> <opérateur> <valeur> [valeur2]", 3, 1);
+    commands_add(cmds, search);
+    
+    Command *delete = command_create("delete", "Supprimer une entrée de la table", "delete <index>", 1, 0);
+    commands_add(cmds, delete);
+    
+    Command *clear = command_create("clear", "Effacer l'écran", "aucuns arguments", 0, 0);
+    commands_add(cmds, clear);
+
+    Command *show = command_create("show", "Affiche les tables", "aucuns arguments", 0, 0);
+    commands_add(cmds, show);
+
+    const char* selectNames[] = {
+        "Table",
+        "Data",
+        "Index 0",
+        "Index 1",
+        "Index 2"
+    };
+    Selects* selects = selects_create(selectNames, sizeof(selectNames) / sizeof(char*));
+    if (!selects) {
+        ui_displayError("Impossible de créer les sélections");
+        commands_destroy(cmds);
+        Table_destroy(table);
+        return 1;
+    }
+
+    Selector* selector = selector_create(selects);
+    if (!selector) {
+        ui_displayError("Impossible de créer le sélecteur");
+        selects_destroy(selects);
+        commands_destroy(cmds);
+        Table_destroy(table);
+        return 1;
+    }
+
+    char input[MAX_INPUT_SIZE];
+    Mode mode = MODE_WRITE;
+    bool running = true;
+
+    ui_displayWelcome();
+
+    while (running) {
+        if (mode == MODE_WRITE) {
+            printf("> ");
+
+            if (!fgets(input, MAX_INPUT_SIZE, stdin)) {
+                break;
+            }
+            input[strcspn(input, "\n")] = 0;
+
+            int argc = 0;
+            char** argv = args_separation(input, &argc);
+            if (!argv || argc == 0) {
+                continue;
+            }
+
+            char* command = argv[0];
+            char** cmdArgs = argv[1];
+            argc--;
+
+            if (!handle_command(table, command, cmdArgs, argc, cmds, &mode)) {
+                running = false;
+            }
+
+            args_destroy(argv, argc + 1);
+        }
+        else if (mode == MODE_SELECT) {
+            int selection = selector_handleInput(selector, &mode);
+            if (selection >= 0) {
+                ui_clearScreen();
+                ui_displayWelcome();
+                printf("Mode actuel : %s\n", selects->selects[selection].name);
+
+                switch (selection) {
+                case 0:
+                    cmd_print(table);
+                    break;
+                case 2:
+                case 3:
+                case 4:
+                    cmd_print_index(table, selection - 2);
+                    break;
+                }
+            }
+            mode = MODE_WRITE;
+        }
+    }
+
+    selector_destroy(selector);
+    selects_destroy(selects);
+    commands_destroy(cmds);
+    Table_destroy(table);
+
+    return 0;
 }
 #endif

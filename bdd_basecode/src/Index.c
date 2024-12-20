@@ -183,7 +183,7 @@ void Index_insertEntry(Index* self, char* key, EntryPointer entryPtr)
     }
 
     // Rééquilibre l'arbre
-    Index_balance(self, nodePtr);
+    //Index_balance(self, nodePtr);
 }
 
 int64_t Index_getNodeHeight(Index *self, NodePointer nodePtr)
@@ -360,7 +360,6 @@ void Index_balance(Index *self, NodePointer nodePtr)
 
         IndexNode node;
         Index_readNode(self, &node, nodePtr);
-        NodePointer parentPtr = node.parentPtr;
 
         if (balance == 2)
         {
@@ -381,7 +380,7 @@ void Index_balance(Index *self, NodePointer nodePtr)
             Index_rotateRight(self, nodePtr);
         }
 
-        nodePtr = parentPtr;
+        nodePtr = node.parentPtr;
     }
 }
 
@@ -405,13 +404,13 @@ void Index_debugPrintRec(Index *self, NodePointer nodePtr, int depth, int isLeft
 
     Index_debugPrintRec(self, node.rightPtr, depth + 1, false);
 
-    for (int i = 0; i < depth - 1; i++) printf("\t");
+    for (int i = 0; i < depth - 1; i++) printf("          ");
     if (depth > 0)
     {
         if (isLeft) printf("  \\-");
         else printf("  /-");
     }
-    printf("[%s] : %ld\n", (node.key), node.height);
+    printf("|%s : %ld|\n", (node.key), node.height);
 
     Index_debugPrintRec(self, node.leftPtr, depth + 1, true);
 }
