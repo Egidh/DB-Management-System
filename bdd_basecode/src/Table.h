@@ -105,7 +105,7 @@ typedef struct Table
     /// @brief Fichier contenant les données de la table.
     FILE *dataFile;
 
-    /// @brief Nombre d'entrées de la table.
+    /// @brief Nombre d'entrées valides de la table.
     uint64_t entryCount;
 
     /// @brief Taille d'une entrée en octets.

@@ -14,22 +14,29 @@
 #if 0
 int main(int argc, char** argv)
 {
-    Table* table = Table_load("psittamulgiformes.tbl", "../data/intro_1");
+    Table* table = Table_load("psittamulgiformes.tbl", "../data/intro");
+    //Table* table = Table_load("students.tbl", "../data/students");
 
-    //Entry* cherry = Entry_create(table);
-    //strcpy(cherry->values[0], "Cherry");
-    //strcpy(cherry->values[1], "Quokka");
-    //strcpy(cherry->values[2], "36");
 
-    //Table_insertEntry(table, cherry);
-
-    Filter filter = { 1, OP_EQ, "Quokka", "Pepsi" };
+    Filter filter = { 0, OP_EQ, "Cherry", "19" };
     SetEntry* results = SetEntry_create();
     Table_search(table, &filter, results);
 
+    Table_removeEntry(table, results->root->data);
+    SetEntry_destroy(results);
+
+    results = SetEntry_create();
+    Table_search(table, &filter, results);
     Table_printSearchResult(results, table);
 
-    Table_debugPrint(table);
+
+    Entry* arthur = Entry_create(table);
+    strcpy(arthur->values[0], "Arthur");
+    strcpy(arthur->values[1], "Quokka");
+    strcpy(arthur->values[2], "193");
+
+    Table_insertEntry(table, arthur);
+    Entry_destroy(arthur);
 
     SetEntry_destroy(results);
     Table_destroy(table);
@@ -39,35 +46,63 @@ int main(int argc, char** argv)
 #endif
 
 //create from scratch
-#if 0
+#if 1
 int main(int argc, char** argv)
 {
-    //Table* table = Table_load("psittamulgiformes.tbl", "../data/intro/");
-    Table* table = Table_createFromCSV("../data/intro_1/psittamulgiformes.csv", "../data/intro_1");
+    //Table* table = Table_createFromCSV("../data/students/students.csv", "../data/students");
+    Table* table = Table_createFromCSV("../data/intro/psittamulgiformes.csv", "../data/intro");
 
-    /*Entry* cherry = Entry_create(table);
+
+    Entry* cherry = Entry_create(table);
     strcpy(cherry->values[0], "Cherry");
     strcpy(cherry->values[1], "Quokka");
     strcpy(cherry->values[2], "36");
 
     Table_insertEntry(table, cherry);
 
-    Filter filter = {0, OP_EQ, "Cherry", ""};
-    SetEntry* entry = SetEntry_create();
-    Table_search(table, &filter, entry);
+    Entry* light = Entry_create(table);
+    strcpy(light->values[0], "Light");
+    strcpy(light->values[1], "Quokka");
+    strcpy(light->values[2], "25");
 
-    Entry* result = Entry_create(table);
-    if (entry->root)
-        Table_readEntry(table, result, entry->root->data);
-    else printf("not found\n");
+    Table_insertEntry(table, light);
 
-    Entry_print(result);
 
-    Table_debugPrint(table);
+    Filter filter = { 0, OP_EQ, "Cherry", "19" };
+    SetEntry* results = SetEntry_create();
+    Table_search(table, &filter, results);
 
-    Entry_destroy(result);
+    Table_removeEntry(table, results->root->data);
+    SetEntry_destroy(results);
+
+    results = SetEntry_create();
+    Table_search(table, &filter, results);
+    Table_printSearchResult(results, table);
+
+
+    Entry* arthur = Entry_create(table);
+    strcpy(arthur->values[0], "Arthur");
+    strcpy(arthur->values[1], "Quokka");
+    strcpy(arthur->values[2], "193");
+
+    Table_insertEntry(table, arthur);
+    Entry_destroy(arthur);
+
+
+    Entry* daniil = Entry_create(table);
+    strcpy(daniil->values[0], "Daniil");
+    strcpy(daniil->values[1], "Alcoolique");
+    strcpy(daniil->values[2], "175");
+
+    Table_insertEntry(table, daniil);
+    Entry_destroy(daniil);
+
+    SetEntry_destroy(results);
+
     Entry_destroy(cherry);
-    SetEntry_destroy(entry);*/
+    Entry_destroy(light);
+
+
     Table_destroy(table);
 
     return EXIT_SUCCESS;

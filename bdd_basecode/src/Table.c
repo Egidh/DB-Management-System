@@ -140,7 +140,7 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
         if (toIndex[i])
         {
             attribute->index = Index_create(table, i, table->folderPath);
-            printf("%s\n", attribute->name);
+            //printf("%s\n", attribute->name);
 
             assert(attribute->index);
         }
@@ -181,13 +181,13 @@ void Table_writeHeader(Table *self)
             fwrite(&attribute->index->rootPtr, sizeof(uint64_t), 1, tbl);
         else
             fwrite(&(uint64_t) { -1 }, sizeof(uint64_t), 1, tbl);
-        fwrite(&(uint64_t) { -1 }, sizeof(uint64_t), 1, tbl);
+        fwrite(&attribute->index->nextFreePtr, sizeof(uint64_t), 1, tbl);
 
     }
 
 
     fwrite(&self->entryCount, sizeof(uint64_t), 1, tbl);
-    fwrite(&(uint64_t) { -1 }, sizeof(uint64_t), 1, tbl);
+    fwrite(&self->nextFreePtr, sizeof(uint64_t), 1, tbl);
     fclose(tbl);
 
 }
@@ -221,8 +221,12 @@ Table *Table_load(char *tblFilename, char *folderPath)
     table->attributes = (Attribute*)calloc(table->attributeCount, sizeof(Attribute));
     void* tmp = calloc(1, sizeof(uint64_t));
     table->entrySize = sizeof(EntryPointer);
+
     uint64_t* indexRoot = NULL;
     indexRoot = (uint64_t*)calloc(table->attributeCount, sizeof(uint64_t));
+    uint64_t* indexFreePtr = NULL;
+    indexFreePtr = (uint64_t*)calloc(table->attributeCount, sizeof(uint64_t));
+
     for (int i = 0; i < table->attributeCount; i++)
     {
         Attribute* attribute = table->attributes + i;
@@ -230,7 +234,7 @@ Table *Table_load(char *tblFilename, char *folderPath)
         fread(&attribute->name, MAX_NAME_SIZE, 1, tbl);
         fread(&attribute->size, sizeof(uint64_t), 1, tbl);
         fread(indexRoot + i, sizeof(uint64_t), 1, tbl);
-        fread(tmp, sizeof(uint64_t), 1, tbl); //skip la partie concernant les entrees libres  
+        fread(indexFreePtr + i, sizeof(uint64_t), 1, tbl); //skip la partie concernant les entrees libres  
         attribute->id = i;
         table->entrySize += attribute->size;
     }
@@ -254,7 +258,7 @@ Table *Table_load(char *tblFilename, char *folderPath)
         if (indexRoot[i] != INVALID_POINTER)
         {
             //printf("Loading Index\n");
-            attribute->index = Index_load(table, i, table->folderPath, indexRoot[i], -1);
+            attribute->index = Index_load(table, i, table->folderPath, indexRoot[i],indexFreePtr[i]);
         }
     }
     free(indexRoot);
@@ -319,10 +323,16 @@ void Table_search(Table *self, Filter *filter, SetEntry *resultSet)
     }
     else
     {
-        for (int i = 0; i < self->entryCount; i++)
+        uint64_t length = self->entryCount;
+        for (int i = 0; i < length; i++)
         {
             EntryPointer entryPtr = i * self->entrySize;
             Table_readEntry(self, testedEntry, entryPtr);
+            if (testedEntry->nextFreePtr != VALID_ENTRY)
+            {
+                length++;
+                continue;
+            }
 
             if (Filter_test(filter, testedEntry->values[filter->attributeIndex]) & FILTER_FOUND)
                 SetEntry_insert(resultSet, entryPtr);
@@ -358,53 +368,62 @@ void Table_insertEntry(Table *self, Entry *entry)
     
     FILE* dat = self->dataFile;
     assert(dat);
-    EntryPointer newEntryPtr = self->entrySize * self->entryCount;
+    EntryPointer newEntryPtr;
+    Entry *nextFreeEntry = Entry_create(self);
 
     if (self->nextFreePtr == INVALID_POINTER)
     {
+        newEntryPtr = self->entrySize * self->entryCount;
         Table_writeEntry(self, entry, newEntryPtr);
         self->entryCount++;
     }
     else
+    {
+        newEntryPtr = self->nextFreePtr;
+        Table_readEntry(self, nextFreeEntry, newEntryPtr);
         Table_writeEntry(self, entry, self->nextFreePtr);
-
-
-    Table_writeHeader(self);
+        self->nextFreePtr = nextFreeEntry->nextFreePtr;
+    }
 
     for (int i = 0; i < self->attributeCount; i++)
     {
         Index* index = self->attributes[i].index;
         if (index)
+        {
             Index_insertEntry(index, entry->values[i], newEntryPtr);
+
+        }
     }
+
+    Table_writeHeader(self);
+
     return;
 }
 
 void Table_removeEntry(Table* self, EntryPointer entryPtr)
 {
-    assert(self && entryPtr != INVALID_POINTER);
-    FILE* dat = self->dataFile;
-    FSeek(dat, entryPtr, SEEK_SET);
-    fwrite(&(uint64_t) { -2 }, sizeof(uint64_t), 1, dat);
-    fwrite(&(uint64_t) { 0 }, sizeof(uint64_t), 1, dat);
-    if ((self->entrySize - sizeof(uint64_t)) > 0)
-        fwrite(&(char) {0}, 1, (self->entrySize - sizeof(uint64_t)), dat);
+    if (!self || entryPtr == INVALID_POINTER) return;
+    Entry* remove = Entry_create(self);
+    Table_readEntry(self, remove, entryPtr);
 
-    EntryPointer* tmp = &self->nextFreePtr;
-    if (*tmp != -1)
+    for (int i = 0; i < self->attributeCount; i++)
     {
-        while (*tmp != -2)
-        {
-            FSeek(dat, *tmp, SEEK_SET);
-            fread(tmp, sizeof(EntryPointer), 1, dat);
-        }
-        FSeek(dat, -sizeof(EntryPointer), SEEK_CUR);
-        fwrite(&entryPtr, sizeof(EntryPointer), 1, dat);
-    }
-    else
-        self->nextFreePtr = entryPtr;
+        Attribute* attribute = self->attributes + i;
 
+        if (attribute->index) Index_removeEntry(attribute->index, remove->values[i], entryPtr);
+    }
+    remove->nextFreePtr = self->nextFreePtr;
+
+    Entry_destroy(remove);
+    remove = Entry_create(self);
+
+    remove->nextFreePtr = self->nextFreePtr;
+    self->nextFreePtr = entryPtr;
+
+    Table_writeEntry(self, remove, entryPtr);
     self->entryCount--;
+
+    Table_writeHeader(self);
 
     return;
 }
@@ -435,7 +454,7 @@ Entry *Entry_create(Table *table)
         newValues[i] = (char*)calloc(1, table->attributes[i].size);
 
     Entry* newEntry = (Entry*)calloc(1, sizeof(Entry));
-    newEntry->nextFreePtr = table->nextFreePtr;
+    newEntry->nextFreePtr = VALID_ENTRY;
     newEntry->values = newValues;
     newEntry->attributeCount = table->attributeCount;
     
@@ -454,7 +473,7 @@ void Entry_destroy(Entry *self)
 
 void Entry_print(Entry *self)
 {
-    if (!self)
+    if (!self && self->nextFreePtr == VALID_ENTRY)
         return;
     for (int i = 0; i < self->attributeCount; i++)
         printf("%s\t", self->values[i]);

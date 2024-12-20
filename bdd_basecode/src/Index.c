@@ -78,7 +78,10 @@ NodePointer Index_createNode(Index *self, char *key, EntryPointer entryPtr)
 
 void Index_destroyNode(Index *self, NodePointer nodePtr)
 {
-    // TODO
+    IndexNode node = { 0 };
+    node.nextFreePtr = self->nextFreePtr;
+    self->nextFreePtr = nodePtr;
+    Index_writeNode(self, &node, nodePtr);
 }
 
 Index *Index_create(Table *table, int attributeIndex, char *folderPath)
@@ -100,10 +103,16 @@ Index *Index_create(Table *table, int attributeIndex, char *folderPath)
 
     newIndex->indexFile = idx;
     Entry* newEntry = Entry_create(table);
-    for (int i = 0; i < table->entryCount; i++)
+    uint64_t length = table->entryCount;
+    for (int i = 0; i < length; i++)
     {
         EntryPointer entryPointer = i * table->entrySize;
         Table_readEntry(table, newEntry, entryPointer);
+        if(newEntry->nextFreePtr != VALID_ENTRY)
+        {
+            length++;
+            continue;
+        }
         Index_insertEntry(newIndex, newEntry->values[attributeIndex], entryPointer);
     }
 
@@ -148,7 +157,20 @@ Index *Index_load(
 
 void Index_insertEntry(Index* self, char* key, EntryPointer entryPtr)
 {
-    NodePointer nodePtr = Index_createNode(self, key, entryPtr);
+    NodePointer nodePtr; 
+    IndexNode node;
+
+    if (self->nextFreePtr != INVALID_POINTER)
+    {
+        nodePtr = self->nextFreePtr;
+        Index_readNode(self, &node, nodePtr);
+        nodePtr = Index_createNode(self, key, entryPtr);
+        self->nextFreePtr = node.nextFreePtr;
+    }
+    else
+        nodePtr = Index_createNode(self, key, entryPtr);
+
+    
 
     if (self->rootPtr == INVALID_POINTER)
     {
@@ -257,9 +279,9 @@ void Index_setRightNode(Index *self, NodePointer nodePtr, NodePointer rightPtr)
     }
 }
 
+
 NodePointer Index_getSubtreeMaximum(Index *self, NodePointer nodePtr)
 {
-    // TODO
     return INVALID_POINTER;
 }
 
@@ -386,13 +408,82 @@ void Index_balance(Index *self, NodePointer nodePtr)
 
 NodePointer Index_maximum(Index *self, NodePointer nodePtr)
 {
-    // TODO
-    return INVALID_POINTER;
+    assert(self);
+
+    if (nodePtr == INVALID_POINTER) return INVALID_POINTER;
+
+    IndexNode node;
+    Index_readNode(self, &node, nodePtr);
+
+    while (node.rightPtr != INVALID_POINTER)
+    {
+        nodePtr = node.rightPtr;
+        Index_readNode(self, &node, nodePtr);
+    }
+    return nodePtr;
 }
 
 void Index_removeEntry(Index *self, char *key, EntryPointer entryPtr)
 {
-    // TODO
+    assert(self);
+
+    //if (self->rootPtr == INVALID_POINTER)
+    //{
+    //    printf("Racine de l'index invalide\n");
+    //    return;
+    //}
+
+    NodePointer nodePtr = INVALID_POINTER;
+    nodePtr = Index_searchEntry(self, key, entryPtr);
+    if ( nodePtr == INVALID_POINTER)
+    {
+        printf("Entree non trouvée\n");
+        return;
+    }
+
+    IndexNode node;
+    Index_readNode(self, &node, nodePtr);
+    assert(nodePtr != INVALID_POINTER);
+
+    NodePointer start = INVALID_POINTER;
+    if (node.leftPtr == INVALID_POINTER)
+    {
+        // Remplacement par le fils droit
+        Index_replaceChild(self, node.parentPtr, nodePtr, node.rightPtr);
+        start = node.parentPtr;
+        Index_destroyNode(self, nodePtr);
+    }
+    else if (node.rightPtr == INVALID_POINTER)
+    {
+        // Remplacement par le fils gauche
+        Index_replaceChild(self, node.parentPtr, nodePtr, node.leftPtr);
+        start = node.parentPtr;
+        Index_destroyNode(self, nodePtr);
+    }
+    else
+    {
+        // Le noeud a deux fils
+        // On l'échange avec sa valeur immédiatement inférieure (qui n'a plus de fils droit)
+        NodePointer maxLeftPtr = Index_maximum(self, node.leftPtr);
+        IndexNode maxLeft;
+        Index_readNode(self, &maxLeft, maxLeftPtr);
+
+        //on transfere les données de maxleft à node
+        node.entryPtr = maxLeft.entryPtr;
+        strncpy(node.key, maxLeft.key, self->attributeSize);
+        Index_writeNode(self, &node, nodePtr);
+
+        // Puis on le supprime comme précédemment
+        Index_replaceChild(self, maxLeft.parentPtr, maxLeftPtr, maxLeft.leftPtr);
+        start = maxLeft.parentPtr;
+        Index_destroyNode(self, maxLeftPtr);
+    }
+
+    // Equilibre l'arbre à partir du parent du noeud supprimé
+    Index_balance(self, start);
+
+
+    return;
 }
 
 void Index_debugPrintRec(Index *self, NodePointer nodePtr, int depth, int isLeft)
@@ -444,12 +535,10 @@ NodePointer Index_searchEntryRec(Index *self, char *key, EntryPointer entryPtr, 
     int comp = strcmp(node.key, key);
     if (comp == 0 && node.entryPtr == entryPtr) return nodePtr;
     
-    if (comp > 0)
-        nodePtr = node.leftPtr;
-    else if (comp < 0)
-        nodePtr = node.rightPtr;
+    NodePointer left = Index_searchEntryRec(self, key, entryPtr, node.leftPtr);
+    NodePointer right = Index_searchEntryRec(self, key, entryPtr, node.rightPtr);
 
-    return Index_searchEntryRec(self, key, entryPtr, nodePtr);
+    return (left != INVALID_POINTER) ? left: right;
 }
 
 NodePointer Index_searchEntry(Index *self, char *key, EntryPointer entryPtr)
