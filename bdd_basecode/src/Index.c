@@ -103,13 +103,14 @@ Index *Index_create(Table *table, int attributeIndex, char *folderPath)
 
     newIndex->indexFile = idx;
     Entry* newEntry = Entry_create(table);
-    uint64_t length = table->entryCount;
+    uint64_t length = table->validEntryCount;
     for (int i = 0; i < length; i++)
     {
         EntryPointer entryPointer = i * table->entrySize;
         Table_readEntry(table, newEntry, entryPointer);
         if(newEntry->nextFreePtr != VALID_ENTRY)
         {
+            printf("skipped\n");
             length++;
             continue;
         }
@@ -205,7 +206,7 @@ void Index_insertEntry(Index* self, char* key, EntryPointer entryPtr)
     }
 
     // Rééquilibre l'arbre
-    //Index_balance(self, nodePtr);
+    Index_balance(self, nodePtr);
 }
 
 int64_t Index_getNodeHeight(Index *self, NodePointer nodePtr)

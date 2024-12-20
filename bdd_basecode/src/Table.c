@@ -129,6 +129,7 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
     Entry_destroy(newEntry);
 
     table->nextFreePtr = INVALID_POINTER;
+    table->validEntryCount = table->entryCount;
 
     fclose(csv);
 
@@ -187,6 +188,7 @@ void Table_writeHeader(Table *self)
 
 
     fwrite(&self->entryCount, sizeof(uint64_t), 1, tbl);
+    fwrite(&self->validEntryCount, sizeof(uint64_t), 1, tbl);
     fwrite(&self->nextFreePtr, sizeof(uint64_t), 1, tbl);
     fclose(tbl);
 
@@ -239,6 +241,7 @@ Table *Table_load(char *tblFilename, char *folderPath)
         table->entrySize += attribute->size;
     }
     fread(&table->entryCount, sizeof(uint64_t), 1, tbl);
+    fread(&table->validEntryCount, sizeof(uint64_t), 1, tbl);
     fread(&table->nextFreePtr, sizeof(uint64_t), 1, tbl);
     free(tmp);
     fclose(tbl);
@@ -323,7 +326,7 @@ void Table_search(Table *self, Filter *filter, SetEntry *resultSet)
     }
     else
     {
-        uint64_t length = self->entryCount;
+        uint64_t length = self->validEntryCount;
         for (int i = 0; i < length; i++)
         {
             EntryPointer entryPtr = i * self->entrySize;
@@ -384,6 +387,8 @@ void Table_insertEntry(Table *self, Entry *entry)
         Table_writeEntry(self, entry, self->nextFreePtr);
         self->nextFreePtr = nextFreeEntry->nextFreePtr;
     }
+    self->validEntryCount++;
+
 
     for (int i = 0; i < self->attributeCount; i++)
     {
@@ -421,7 +426,7 @@ void Table_removeEntry(Table* self, EntryPointer entryPtr)
     self->nextFreePtr = entryPtr;
 
     Table_writeEntry(self, remove, entryPtr);
-    self->entryCount--;
+    self->validEntryCount--;
 
     Table_writeHeader(self);
 
@@ -440,6 +445,7 @@ void Table_debugPrint(Table *self)
         printf(" taille : %lu\n", attribute->size);
     }
     printf("\nNombre d'entrees : %lu\n", self->entryCount);
+    printf("\nNombre d'entrees valides : %lu\n", self->validEntryCount);
     printf("\nTaille des entrees : %lu\n", self->entrySize);
     printf("Prochain emplacement libre : %lu\n", self->nextFreePtr);
 
