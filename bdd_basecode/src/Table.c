@@ -65,8 +65,7 @@ int Filter_test(Filter *self, char *nodeKey)
 Table *Table_createFromCSV(char *csvPath, char *folderPath)
 {
     //Creation et initialisation d'une structure Table
-    Table *table = NULL;
-    table = (Table*)calloc(1, sizeof(Table));
+    Table *table = (Table*)calloc(1, sizeof(Table));
     if (!table)
         printf("pas de table\n");
     assert(table);
