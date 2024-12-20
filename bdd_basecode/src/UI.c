@@ -8,6 +8,16 @@ void printf_utf8(const wchar_t* message) {
 }
 
 
+int Table_findAttribute(Table* table, const char* attributeName) {
+    for (int i = 0; i < table->attributeCount; i++) {
+        if (strcmp(table->attributes[i].name, attributeName) == 0) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 void ui_displayColoredText(const char* text, Color color) {
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	SetConsoleTextAttribute(hConsole, color);
@@ -619,12 +629,3 @@ void cmd_selectTable(Table* table, char** args, int argc, const Commands* comman
     Entry_destroy(entry);
 }
 
- int Table_findAttribute(Table* table, const char* attributeName) {
-	for (int i = 0; i < table->attributeCount; i++) {
-		if (strcmp(table->attributes[i].name, attributeName) == 0) {
-			return i;
-		}
-	}
-
-	return -1;
-}

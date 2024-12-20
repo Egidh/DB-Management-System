@@ -42,12 +42,12 @@ typedef struct {
 typedef struct {
     Select* selects;
     int selectCount;
-} Selects;
+}Selects;
 
 typedef struct {
     Selects* selections;
     int numberOfSelects;
-} Selector;
+}Selector;
 
 // Codes clavier
 typedef enum {
@@ -55,13 +55,13 @@ typedef enum {
     SCANCODE_DOWN = 80,
     KEY_ENTER = 13,
     KEY_ESC = 27
-} KeyCode;
+}KeyCode;
 
 // Modes d'interface
 typedef enum {
     MODE_WRITE,
     MODE_SELECT
-} Mode;
+}Mode;
 
 typedef enum {
     COLOR_BLUE = 1,
