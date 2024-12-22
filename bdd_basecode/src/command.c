@@ -4,9 +4,14 @@ void commands_destroy(Commands* commands) {
     if (!commands) return;
 
     if (commands->commands) {
+        for (int i = 0; i < commands->commandCount; i++) {
+            free(commands->commands[i].name);
+            free(commands->commands[i].description);
+            free(commands->commands[i].argList);
+            free(commands->commands[i].example);
+        }
         free(commands->commands);
     }
-
     free(commands);
 }
 
@@ -68,8 +73,6 @@ void commands_displayHelp(const Commands* cmd, const char** args, int argc) {
 
 		return;
     }
-
-
 
 
     for (int i = 0; i < cmd->commandCount; i++) {

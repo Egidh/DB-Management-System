@@ -176,7 +176,7 @@ int main(void) {
     Command *print = command_create("print", "Afficher la table", "aucuns arguments", NULL, 0, 0);
     commands_add(cmds, print);
     
-    Command *insert = command_create("insert", "Insérer une entrée dans la table", "insert <attribut1> <attribut2> <attribut3> ...", "insert Jo Ibis 10", table->attributeCount, 0);
+    Command *insert = command_create("insert", "Insérer une entrée dans la table", "insert <valeur1> <valeur2> ...", "insert Jo 20", table->attributeCount, 0);
     commands_add(cmds, insert);
     
     Command *search = command_create("search", "Rechercher des entrées dans la table", "search <attribut> <opérateur> <valeur> [valeur2]", "search Prenom < Jo (<> pour between)", 3, 6);

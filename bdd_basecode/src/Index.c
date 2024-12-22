@@ -554,17 +554,19 @@ void Index_sort(Index *self, NodePointer nodePtr, bool mode)
 	IndexNode node;
 	Index_readNode(self, &node, nodePtr);
 
+
     if (mode == 1) {
 	    Index_sort(self, node.leftPtr, 1);
-	    //printf("%s\n", node.key);
         Entry * entry = Entry_create(self->table);
         Table_readEntry(self->table, entry, node.entryPtr);
-        Entry_print(entry);
+        if (entry->nextFreePtr == VALID_ENTRY) Entry_print(entry);
 	    Index_sort(self, node.rightPtr, 1);
     }
     else {
 		Index_sort(self, node.rightPtr, 0);
-	    printf("%s\n", node.key);
+		Entry * entry = Entry_create(self->table);
+		Table_readEntry(self->table, entry, node.entryPtr);
+		if (entry->nextFreePtr == VALID_ENTRY) Entry_print(entry);
 	    Index_sort(self, node.leftPtr, 0);
     }
 }
