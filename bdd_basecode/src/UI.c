@@ -37,11 +37,6 @@ void cmd_hello(void) {
     printf("Bonjour !\n");
 }
 
-void cmd_exit(void) {
-    printf("Au revoir !\n");
-    exit(0);
-}
-
 //void cmd_insert(Table* table, char** args, int argc, const Commands* commands) {
 //    if (!table || !args || !commands) {
 //        ui_displayError("Arguments invalides pour l'insertion");

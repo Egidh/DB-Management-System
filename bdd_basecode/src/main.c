@@ -15,18 +15,18 @@ int main(int argc, char** argv)
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 
+    Table *table = Table_createFromCSV("../data/psittamulgiformes.csv", "../data");
+
     bool quit = false;
     ui_displayWelcome();
+    char buffer[512];
 
-    Table *table = Table_createFromCSV("../data/psittamulgiformes.csv", "../data");
     while (!quit)
     {
-
-        char buffer[512];
         printf("> ");
         fgets(buffer, 512, stdin);
-
-        if (strcmp(buffer, "exit\n") == 0) quit = 1;
+        
+        Command cmd = str_to_cmd(buffer);
     }
 
     Table_destroy(table);

@@ -1,4 +1,6 @@
-//#include "UI.h"
+#include "UI.h"
+
+
 //
 //bool handle_command(Table *table, Command cmd, char **args)
 //{

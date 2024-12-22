@@ -50,11 +50,3 @@ typedef enum {
 
 void print_color(const char* text, Color color);
 void ui_displayWelcome(void);
-
-///@brief Affiche les statistiques principales de la table
-///@param table La table concernée
-void cmd_stats(Table* table);
-
-///@brief oui
-///@param table La table concernée
-void cmd_structure(Table* table);
