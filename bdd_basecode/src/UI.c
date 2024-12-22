@@ -330,44 +330,145 @@ void cmd_insert(Table* table, char** args, int argc, const Commands* commands) {
     printf("Entree inseree avec succes\n");
 }
 
+Combination get_operator(char* arg)
+{
+    if (strcmp(arg,"OR") == 0) return OR;
+    if (strcmp(arg, "AND") == 0) return AND;
+    if (strcmp(arg, "WITHOUT") == 0) return WITHOUT;
+    else return BAD_OPERATION;
+}
+
+int verif_filter(char** args, int argc, Filter* filter, int simple)
+{
+    if (filter->attributeIndex == -1)
+    {
+        printf("\nErreur: %s Attribut invalide\n", args[0]);
+        return 1;
+    }
+
+    if (filter->requestOp == -1)
+    {
+        printf("\nErreur : %s operation non reconnue\n", args[1]);
+        return 1;
+    }
+
+    if (filter->requestOp == OP_BETW && simple == 1) 
+    {
+        if (argc >= 4)
+            filter->key2 = args[3];
+        else
+        {
+            printf("\nArgument manquant pour BETW !\nAttribut BETW key_1 key_2\n");
+            return 1;
+        }
+    }
+    if (filter->requestOp == OP_BETW && simple == 0)
+    {
+        if (argc == 8)
+            filter->key2 = args[7];
+        else if (argc >= 9)
+            filter->key2 = args[8];
+        else
+        {
+            printf("\nArgument manquant pour BETW !\nAttribut BETW key_1 key_2\n");
+            return 1;
+        }
+    }
+    return 0;
+}
+
+RequestOp str_to_op(const char* op) {
+    if (strcmp(op, "LT") == 0) return OP_LT;
+    if (strcmp(op, "LE") == 0) return OP_LEQ;
+    if (strcmp(op, "EQ") == 0) return OP_EQ;
+    if (strcmp(op, "GE") == 0) return OP_GEQ;
+    if (strcmp(op, "GT") == 0) return OP_GT;
+    if (strcmp(op, "BETW") == 0) return OP_BETW;
+    return -1;
+}
+
 void cmd_search(Table* table, char** args, int argc, const Commands* commands) {
     if (!table || !args || !commands) {
         ui_displayError("Arguments invalides pour la recherche");
         return;
     }
 
+    int mode = 0;
+
     Filter filter = { Table_findAttribute(table, args[0]), str_to_op(args[1]), args[2], 0};
-    if (filter.attributeIndex == -1)
-    {
-        char buffer[256];
-        sprintf(buffer, "Attribut invalide : %s.\n", args[0]);
-        ui_displayError(buffer);
-        return;
-    }
+    Filter secondaryFilter;
 
-    if(filter.requestOp == -1)
-    {
-        char buffer[256];
-        sprintf(buffer, "Operation invalide : %s.\n", args[1]);
-		ui_displayError(buffer);
-        return;
-    }
+    int verif = verif_filter(args, argc, &filter, 1);
+    if (verif)
 
-    if (strcmp(args[1], "<>") == 0) {
-        if (argc == 4)
-            filter.key2 = args[3];
+        return;
+    Combination comb;
+
+    if (filter.requestOp != OP_BETW && argc > 3)
+    {
+        if (argc >= 7)
+        {
+            mode = 1;
+            comb = get_operator(args[3]);
+            if (comb == BAD_OPERATION)
+            {
+                printf("Operateur non valable %s.\n", args[3]);
+                return;
+            }
+            secondaryFilter.attributeIndex = Table_findAttribute(table, args[4]);
+            secondaryFilter.requestOp = str_to_op(args[5]);
+            secondaryFilter.key1 = args[6];
+            int check = verif_filter(args, argc, &secondaryFilter, 0);
+            if (check) return;
+        }
         else
         {
-            ui_displayError("\nArgument manquant pour <> !");
-            ui_displayArguments(commands_get(commands, commands_getIndex(commands, "search")));
+            printf("Erreur : Saisie invalide\n");
             return;
         }
     }
+    else if (filter.requestOp == OP_BETW && argc > 4)
+    {
+        if (argc >= 8)
+        {
+            mode = 1;
+            comb = get_operator(args[4]);
+            if (comb == BAD_OPERATION)
+            {
+                printf("Operateur non valable %s\n", args[3]);
+                return;
+            }
+            secondaryFilter.attributeIndex = Table_findAttribute(table, args[5]);
+            secondaryFilter.requestOp = str_to_op(args[6]);
+            secondaryFilter.key1 = args[7];
+            int check = verif_filter(args, argc, &secondaryFilter, 0);
+            if (check) return;
+        }
+        else
+        {
+            printf("Erreur : Saisie invalide\n");
+
+            return;
+        }
+    }
+    verif_filter(args, argc, &secondaryFilter, 0);
 
     printf("\nRecherche dans la table...\n\n");
 
     SetEntry* result = SetEntry_create();
-    Table_search(table, &filter, result);
+
+    switch (mode)
+    {
+    case 0:
+        Table_search(table, &filter, result);
+        break;
+    case 1:
+        Table_combinationSearch(table, &filter, &secondaryFilter, comb, result);
+        break;
+    default:
+        break;
+    }
+
 
     printf("%d entree trouvees :\n\n", SetEntry_size(result));
 
@@ -396,16 +497,6 @@ void cmd_search(Table* table, char** args, int argc, const Commands* commands) {
 
     SetEntry_destroy(result);
     SetEntryIter_destroy(iter);
-}
-
-RequestOp str_to_op(const char* op) {
-  if (strcmp(op, "<") == 0) return OP_LT;
-  if (strcmp(op, "<=") == 0) return OP_LEQ;
-  if (strcmp(op, "==") == 0) return OP_EQ;
-  if (strcmp(op, ">=") == 0) return OP_GEQ;
-  if (strcmp(op, ">") == 0) return OP_GT;
-  if (strcmp(op, "<>") == 0) return OP_BETW;
-    return -1;
 }
 
 void cmd_delete(Table* table, char** args, int argc, const Commands* commands) {

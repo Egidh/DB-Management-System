@@ -11,7 +11,7 @@ int Filter_test(Filter *self, char *nodeKey)
 {
     int cmp1 = strcmp(nodeKey, self->key1);
     int cmp2;
-    if (self->key2) cmp2 = strcmp(nodeKey, self->key2);
+    if (self->key2 && self->requestOp == OP_BETW) cmp2 = strcmp(nodeKey, self->key2);
     else if (self->requestOp == OP_BETW) return -1;
     if (self->requestOp == OP_BETW && (strcmp(self->key1, self->key2) > 0)) {
         int tmp = cmp1;
@@ -355,58 +355,63 @@ void Table_search(Table *self, Filter *filter, SetEntry *resultSet)
     Entry_destroy(testedEntry);
 }
 
-void Table_combinationSearch(Table *self, Filter** filters, Combination comb, int filterCount, SetEntry *resultSet)
+void Table_combinationSearch(Table *self, Filter* filterA, Filter* filterB, Combination comb, SetEntry *resultSet)
 {
-    assert(self && filters);
+    assert(self && filterA && filterB);
 
     if (!resultSet) resultSet = SetEntry_create();
 
-    SetEntry* tempRes = SetEntry_create();
+    SetEntry* tempResA = SetEntry_create();
+    SetEntry* tempResB = SetEntry_create();
     SetEntryIter* iter;
-    SetEntryNode* node = (SetEntryNode*)calloc(1, sizeof(SetEntryNode));
+    SetEntryNode** node = (SetEntryNode**)calloc(1, sizeof(SetEntryNode*));
 
     switch (comb)
     {
     case OR:
-        Table_search(self, filters[0], resultSet);
-        Table_search(self, filters[1], resultSet);
+        Table_search(self, filterA, resultSet);
+        Table_search(self, filterB, resultSet);
         break;
 
     case AND:
-        Table_search(self, filters[0], resultSet);
-        Table_search(self, filters[0], tempRes);
-        iter = SetEntryIter_create(tempRes);
+        Table_search(self, filterA, tempResA);
+        Table_search(self, filterB, tempResB);
+        Table_printSearchResult(tempResA, self);
+        Table_printSearchResult(tempResB, self);
+        iter = SetEntryIter_create(tempResB);
         while (SetEntryIter_isValid(iter))
         {
-            if (!SetEntry_find(resultSet, SetEntryIter_getValue(iter), &node))
-                SetEntry_remove(resultSet, SetEntryIter_getValue(iter));
+            if (SetEntry_find(tempResA, SetEntryIter_getValue(iter), node))
+                SetEntry_insert(resultSet, SetEntryIter_getValue(iter));
             
             SetEntryIter_next(iter);
         }
+        SetEntryIter_destroy(iter);
+
         break;
 
     case WITHOUT:
-        Table_search(self, filters[0], resultSet);
-        Table_search(self, filters[0], tempRes);
+        Table_search(self, filterA, resultSet);
+        Table_search(self, filterB, tempResB);
 
-        iter = SetEntryIter_create(tempRes);
+        iter = SetEntryIter_create(tempResB);
         while (SetEntryIter_isValid(iter))
         {
-            if (SetEntry_find(resultSet, SetEntryIter_getValue(iter), &node))
+            if (SetEntry_find(resultSet, SetEntryIter_getValue(iter), node))
                 SetEntry_remove(resultSet, SetEntryIter_getValue(iter));
 
             SetEntryIter_next(iter);
         }
+        SetEntryIter_destroy(iter);
+
         break;
 
     default :
-        SetEntry_destroy(resultSet);
-        resultSet = NULL;
         break;
     }
+    SetEntry_destroy(tempResA);
+    SetEntry_destroy(tempResB);
     free(node);
-    SetEntryIter_destroy(iter);
-    SetEntry_destroy(tempRes);
 }
 
 void Table_printSearchResult(SetEntry* self, Table* table)

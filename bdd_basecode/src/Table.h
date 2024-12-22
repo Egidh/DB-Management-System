@@ -83,7 +83,8 @@ typedef enum Combination
 {
     AND,
     OR,
-    WITHOUT
+    WITHOUT,
+    BAD_OPERATION
 }Combination;
 
 /// @brief Teste un filtre avec la clé contenue dans un noeud.
@@ -243,4 +244,15 @@ void Entry_print(Entry *self);
 /// @param newEntry Les nouvelles données
 /// @param entryPtr La position dans le .dat des anciennes données
 void Table_modifyEntry(Table* self, Entry* newEntry, EntryPointer entryPtr);
+
+/// <summary>
+/// Effectue une recherche combinant 2 filtres
+/// </summary>
+/// <param name="self"></param>
+/// <param name="filters"></param>
+/// <param name="comb"></param>
+/// <param name="filterCount"></param>
+/// <param name="resultSet"></param>
+void Table_combinationSearch(Table* self, Filter* filterA, Filter* filterB, Combination comb, SetEntry* resultSet);
+
 
