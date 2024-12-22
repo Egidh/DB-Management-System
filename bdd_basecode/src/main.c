@@ -179,7 +179,7 @@ int main(void) {
     Command *insert = command_create("insert", "Insérer une entrée dans la table", "insert <attribut1> <attribut2> <attribut3> ...", "insert Jo Ibis 10", table->attributeCount, 0);
     commands_add(cmds, insert);
     
-    Command *search = command_create("search", "Rechercher des entrées dans la table", "search <attribut> <opérateur> <valeur> [valeur2]", "search Prenom < Jo (<> pour between)", 3, 1);
+    Command *search = command_create("search", "Rechercher des entrées dans la table", "search <attribut> <opérateur> <valeur> [valeur2]", "search Prenom < Jo (<> pour between)", 3, 6);
     commands_add(cmds, search);
     
     Command *delete = command_create("delete", "Supprimer une  ou plusieurs entrées de la table, selon un attribut", "delete <attribut> <valeur> ", "delete Prenom Jo", 2, 0);

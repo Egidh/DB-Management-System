@@ -324,9 +324,9 @@ void cmd_insert(Table* table, char** args, int argc, const Commands* commands) {
 
 Combination get_operator(char* arg)
 {
-    if (arg == "OR") return OR;
-    if (arg == "AND") return AND;
-    if (arg == "WITHOUT") return WITHOUT;
+    if (strcmp(arg,"OR") == 0) return OR;
+    if (strcmp(arg, "AND") == 0) return AND;
+    if (strcmp(arg, "WITHOUT") == 0) return WITHOUT;
     else return BAD_OPERATION;
 }
 
@@ -344,17 +344,17 @@ int verif_filter(char** args, int argc, Filter* filter, int simple)
         return 1;
     }
 
-    if (strcmp(args[1], "<>") == 0 && simple == 1) 
+    if (filter->requestOp == OP_BETW && simple == 1) 
     {
         if (argc >= 4)
             filter->key2 = args[3];
         else
         {
-            printf("\nArgument manquant pour <> !\nAttribut <> key_1 key_2\n");
+            printf("\nArgument manquant pour BETW !\nAttribut BETW key_1 key_2\n");
             return 1;
         }
     }
-    if (strcmp(args[1], "<>") == 0 && simple == 0)
+    if (filter->requestOp == OP_BETW && simple == 0)
     {
         if (argc == 8)
             filter->key2 = args[7];
@@ -362,7 +362,7 @@ int verif_filter(char** args, int argc, Filter* filter, int simple)
             filter->key2 = args[8];
         else
         {
-            printf("\nArgument manquant pour <> !\nAttribut <> key_1 key_2\n");
+            printf("\nArgument manquant pour BETW !\nAttribut BETW key_1 key_2\n");
             return 1;
         }
     }
@@ -370,14 +370,12 @@ int verif_filter(char** args, int argc, Filter* filter, int simple)
 }
 
 RequestOp str_to_op(const char* op) {
-    if (strcmp(op, "<") == 0) return OP_LT;
-    if (strcmp(op, "<=") == 0) return OP_LEQ;
-    if (strcmp(op, "==") == 0) return OP_EQ;
-    else printf("\n%d%d %d\n", op[0], op[1], '==');
-    if (strcmp(op, ">=") == 0) return OP_GEQ;
-    if (strcmp(op, ">") == 0) return OP_GT;
-    else printf("\n%d %d\n", op[0], '>');
-    if (strcmp(op, "<>") == 0) return OP_BETW;
+    if (strcmp(op, "LT") == 0) return OP_LT;
+    if (strcmp(op, "LE") == 0) return OP_LEQ;
+    if (strcmp(op, "EQ") == 0) return OP_EQ;
+    if (strcmp(op, "GE") == 0) return OP_GEQ;
+    if (strcmp(op, "GT") == 0) return OP_GT;
+    if (strcmp(op, "BETW") == 0) return OP_BETW;
     return -1;
 }
 
@@ -405,7 +403,7 @@ void cmd_search(Table* table, char** args, int argc, const Commands* commands) {
             comb = get_operator(args[3]);
             if (comb == BAD_OPERATION)
             {
-                printf("Operateur non valable %s", args[4]);
+                printf("Operateur non valable %s.\n", args[3]);
                 return;
             }
             secondaryFilter.attributeIndex = Table_findAttribute(table, args[4]);
@@ -428,7 +426,7 @@ void cmd_search(Table* table, char** args, int argc, const Commands* commands) {
             comb = get_operator(args[4]);
             if (comb == BAD_OPERATION)
             {
-                printf("Operateur non valable %s", args[4]);
+                printf("Operateur non valable %s\n", args[3]);
                 return;
             }
             secondaryFilter.attributeIndex = Table_findAttribute(table, args[5]);
