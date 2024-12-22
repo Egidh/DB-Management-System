@@ -12,6 +12,9 @@
 ///@brief Taille maximale pour le nom d'un attribut ou d'une table.
 #define MAX_NAME_SIZE 64
 
+///@brief Taille maximale pour le chemin d'un fichier.
+#define MAX_FOLDER_PATH_SIZE 512
+
 typedef struct Index Index;
 typedef struct Entry Entry;
 

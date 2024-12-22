@@ -5,6 +5,7 @@
 */
 
 #include "Table.h"
+#include "UI.h"
 #include "Index.h"
 
 int Filter_test(Filter *self, char *nodeKey)
@@ -64,18 +65,17 @@ int Filter_test(Filter *self, char *nodeKey)
 
 Table *Table_createFromCSV(char *csvPath, char *folderPath)
 {
-    printf("Creation de la table\n");
     //Creation et initialisation d'une structure Table
     Table *table = (Table*)calloc(1, sizeof(Table));
     if (!table)
-        printf("pas de table\n");
+        print_color("pas de table\n", COLOR_RED);
     assert(table);
-    sprintf(table->folderPath, "%s", folderPath);
+    strncpy(table->folderPath, folderPath, MAX_FOLDER_PATH_SIZE);
 
     //ouverture du fichier csv
     FILE* csv = fopen(csvPath, "r");
     if (!csv)
-        printf("pas de csv\n");
+        print_color("pas de csv\n", COLOR_RED);
     assert(csv);
 
     //Lecture du header du fichier csv et creation du header de la table
@@ -102,12 +102,11 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
     snprintf(path, 512, "%s/%s.tbl", folderPath, table->name);
 
 
-    printf("Creation du fichier dat\n");
     ///ouverture du fichier dat
     snprintf(path, 512, "%s/%s.dat", folderPath, table->name);
     FILE* dat = fopen(path, "wb+");
     if (!dat)
-        printf("pas de dat\n");
+        print_color("pas de dat\n", COLOR_RED);
     assert(dat);
 
     table->dataFile = dat;
@@ -135,7 +134,6 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
     fclose(csv);
 
 
-    printf("Creation des index\n");
     //creation de l'index
     for (int i = 0; i < table->attributeCount; i++)
     {
@@ -154,7 +152,7 @@ Table *Table_createFromCSV(char *csvPath, char *folderPath)
     //Ecriture du header du fichier tbl
     Table_writeHeader(table);
 
-    printf("Table creee\n");
+    print_color(u8"Table créée avec succès\n", COLOR_GREEN);
 
     return table;
 }
