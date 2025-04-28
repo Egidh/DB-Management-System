@@ -13,6 +13,8 @@ La solution Visual Studio est créée dans le dossier `_build`.
 
 ## Sous linux (avec gcc)
 
+*Attention : la librairie utilisée pour le rendu en terminal n'est pas compatible avec linux.*
+
 Depuis la racine du projet :
 ```
 mkdir _build_linux
